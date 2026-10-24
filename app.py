@@ -67,19 +67,15 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Configure CORS origins (supports custom domain via ALLOWED_ORIGINS env)
+# Configure CORS origins (supports custom domain via ALLOWED_ORIGINS env, default "*" for public tunnel & localhost)
 env_origins = os.environ.get("ALLOWED_ORIGINS")
 if env_origins:
-    _ALLOWED_ORIGINS = [o.strip() for o in env_origins.split(",") if o.strip()]
+    if env_origins.strip() == "*":
+        _ALLOWED_ORIGINS = "*"
+    else:
+        _ALLOWED_ORIGINS = [o.strip() for o in env_origins.split(",") if o.strip()]
 else:
-    _ALLOWED_ORIGINS = [
-        "http://127.0.0.1:5000",
-        "http://localhost:5000",
-        "http://127.0.0.1",
-        "http://localhost",
-        "https://127.0.0.1:5000",
-        "https://localhost:5000",
-    ]
+    _ALLOWED_ORIGINS = "*"
 
 socketio = SocketIO(
     app,
