@@ -1,0 +1,183 @@
+================================================================================
+   UNIFIED THREAT SANDBOX — LIVE SITE OPERATIONS & MANAGEMENT MANUAL
+================================================================================
+
+Target Application: Unified Threat Sandbox & Web Origin Reconnaissance Platform
+Location: c:\Users\royal\OneDrive\Desktop\threat-sandbox
+Current Local Endpoint: http://127.0.0.1:5000
+Current Public HTTPS Tunnel URL: 
+>>> https://buzz-cabinet-ensures-lead.trycloudflare.com <<<
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. CURRENT LIVE STATUS & SYSTEM OVERVIEW
+2. HOW TO TAKE DOWN THE SITE (STOP EVERYTHING)
+3. HOW TO START THE SITE AGAIN (STEP-BY-STEP)
+4. ONE-CLICK AUTOMATION SCRIPTS (START / STOP)
+5. HOW TO GET A PERMANENT CUSTOM DOMAIN VIA CLOUDFLARE
+6. TROUBLESHOOTING & HEALTH CHECKS
+7. SECURITY & OPERATIONAL BEST PRACTICES
+
+================================================================================
+1. CURRENT LIVE STATUS & SYSTEM OVERVIEW
+================================================================================
+The Threat Sandbox is actively published to the public internet via an encrypted
+Cloudflare Tunnel edge connector.
+
+- Public HTTPS URL : https://buzz-cabinet-ensures-lead.trycloudflare.com
+- Local Server     : http://127.0.0.1:5000 (Python Flask + SocketIO)
+- Cloudflare Binary: %LOCALAPPDATA%\cloudflared.exe
+- Encryption       : TLS 1.3 End-to-End Encryption with HSTS Preload
+- Active Defenses  : SSRF Guard, Anti-CSRF Token, Sliding-Window Rate Limiting
+
+================================================================================
+2. HOW TO TAKE DOWN THE SITE (STOP EVERYTHING)
+================================================================================
+When you want to stop serving your website to the public internet, follow these
+steps:
+
+METHOD A: ONE-CLICK QUICK STOP (RECOMMENDED)
+---------------------------------------------
+Double-click the file named:
+  c:\Users\royal\OneDrive\Desktop\threat-sandbox\stop_live.bat
+
+METHOD B: POWERSHELL COMMANDS
+-----------------------------
+Open PowerShell as your user and run:
+
+  # 1. Stop the Cloudflare Tunnel immediately:
+  Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue
+
+  # 2. Stop the Threat Sandbox Flask backend:
+  Get-Process python -ErrorAction SilentlyContinue | Where-Object {
+      $_.Path -like "*threat-sandbox*"
+  } | Stop-Process -Force
+
+  # 3. Release port 5000 if occupied:
+  Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | ForEach-Object {
+      Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+  }
+
+METHOD C: COMMAND PROMPT (CMD)
+------------------------------
+Open Command Prompt and run:
+
+  taskkill /F /IM cloudflared.exe
+  wmic process where "name='python.exe' and commandline like '%%threat-sandbox%%'" delete
+
+VERIFYING THE SITE IS DOWN:
+---------------------------
+Run:
+  curl.exe -I https://buzz-cabinet-ensures-lead.trycloudflare.com
+Result: Cloudflare will display HTTP 530 / Error 1033 (Origin DNS or tunnel closed).
+
+================================================================================
+3. HOW TO START THE SITE AGAIN (STEP-BY-STEP)
+================================================================================
+Whenever you want to make your website live again:
+
+METHOD A: ONE-CLICK QUICK START (RECOMMENDED)
+----------------------------------------------
+Double-click the file named:
+  c:\Users\royal\OneDrive\Desktop\threat-sandbox\start_live.bat
+
+This will automatically launch both the Flask server and Cloudflare Tunnel in
+two terminal windows, displaying your live public URL on screen.
+
+METHOD B: MANUAL STEP-BY-STEP (POWERSHELL)
+-------------------------------------------
+Step 1: Open PowerShell Terminal 1 (Start Flask Web Server):
+  cd c:\Users\royal\OneDrive\Desktop\threat-sandbox
+  .\.venv\Scripts\python.exe app.py
+
+  -> You should see:
+     [+] Random Forest Behavioral Model loaded successfully.
+     [*] Starting Threat Sandbox Server on http://127.0.0.1:5000 ...
+
+Step 2: Open PowerShell Terminal 2 (Start Cloudflare Tunnel):
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel --url http://127.0.0.1:5000
+
+  -> Look at the terminal output for lines like:
+     +--------------------------------------------------------------------------------------------+
+     |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+     |  https://your-unique-tunnel-name.trycloudflare.com                                         |
+     +--------------------------------------------------------------------------------------------+
+  
+  Copy and share that HTTPS link! Anyone in the world can now securely access your
+  sandbox directly through Cloudflare's high-speed global network.
+
+================================================================================
+4. ONE-CLICK AUTOMATION SCRIPTS
+================================================================================
+Two batch helper scripts are provided in the project root:
+
+1. start_live.bat
+   - Launches the virtual environment Flask backend on http://127.0.0.1:5000
+   - Launches cloudflared.exe pointing to port 5000
+   - Keeps the tunnel window visible so you can see your live URL and incoming traffic
+
+2. stop_live.bat
+   - Kills cloudflared.exe immediately (takes the public URL offline)
+   - Kills the Python Flask backend process on port 5000
+   - Cleans up network sockets
+
+================================================================================
+5. HOW TO GET A PERMANENT CUSTOM DOMAIN VIA CLOUDFLARE (OPTIONAL & FREE)
+================================================================================
+TryCloudflare quick tunnels generate a new random URL each time you restart.
+If you own a custom domain (e.g. `mysandbox.com`) registered on Cloudflare, you
+can assign a permanent URL (e.g. `https://sandbox.mysandbox.com`) for free:
+
+Step 1: Authenticate cloudflared with your Cloudflare account:
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel login
+  (This opens a browser window to authorize your domain).
+
+Step 2: Create a permanent named tunnel:
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel create threat-sandbox-tunnel
+
+Step 3: Route your subdomain to the tunnel:
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel route dns threat-sandbox-tunnel sandbox.mysandbox.com
+
+Step 4: Create config file %USERPROFILE%\.cloudflared\config.yml:
+  tunnel: <Tunnel-UUID-from-step-2>
+  credentials-file: C:\Users\royal\.cloudflared\<Tunnel-UUID>.json
+  ingress:
+    - hostname: sandbox.mysandbox.com
+      service: http://127.0.0.1:5000
+    - service: http_status:404
+
+Step 5: Run your permanent tunnel:
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel run threat-sandbox-tunnel
+
+================================================================================
+6. TROUBLESHOOTING & HEALTH CHECKS
+================================================================================
+Q: I get "502 Bad Gateway" on Cloudflare.
+A: The Flask app is not running on port 5000. Start it using:
+   .\.venv\Scripts\python.exe app.py
+
+Q: I get "Site can't be reached" or "429 Too Many Requests".
+A: The platform has a built-in sliding-window rate limiter (20 URL scans/min,
+   10 file uploads/min). Wait 60 seconds for the quota to replenish.
+
+Q: How do I test local health without the internet?
+A: In your browser, open: http://127.0.0.1:5000
+   Or run: curl.exe -I http://127.0.0.1:5000
+
+Q: How do I check if port 5000 is open?
+A: In PowerShell, run:
+   Get-NetTCPConnection -LocalPort 5000
+
+================================================================================
+7. SECURITY & OPERATIONAL BEST PRACTICES
+================================================================================
+1. Virtual Machine Safety: Ensure your Oracle VirtualBox VM is configured with
+   the snapshot `CleanState` as detailed in VIRTUALBOX_SETUP_GUIDE.txt. The sandbox
+   controller reverts the VM before and after every detonation.
+2. Credentials: Keep your .env file secret. Never share your THREAT_SANDBOX_SECRET
+   or API keys.
+3. Public Traffic: Because Cloudflare Tunnel proxies traffic through Cloudflare's
+   edge, your home or local ISP IP address is completely hidden and protected
+   from DDoS attacks.
+================================================================================
