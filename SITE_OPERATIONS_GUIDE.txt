@@ -96,7 +96,7 @@ Step 1: Open PowerShell Terminal 1 (Start Flask Web Server):
      [*] Starting Threat Sandbox Server on http://127.0.0.1:5000 ...
 
 Step 2: Open PowerShell Terminal 2 (Start Cloudflare Tunnel):
-  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel --url http://127.0.0.1:5000
+  & "$env:LOCALAPPDATA\cloudflared.exe" tunnel --protocol http2 --url http://127.0.0.1:5000
 
   -> Look at the terminal output for lines like:
      +--------------------------------------------------------------------------------------------+

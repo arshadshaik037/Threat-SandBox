@@ -14,5 +14,5 @@ timeout /t 3 /nobreak >nul
 echo [2/2] Launching Cloudflare Tunnel to expose public HTTPS URL...
 echo Look for your public https://*.trycloudflare.com URL below:
 echo =================================================================
-"%LOCALAPPDATA%\cloudflared.exe" tunnel --url http://127.0.0.1:5000
+"%LOCALAPPDATA%\cloudflared.exe" tunnel --protocol http2 --url http://127.0.0.1:5000
 pause

@@ -106,6 +106,9 @@ threat-sandbox/
 ├── CHANGELOG.md                # Platform Version & Engineering History
 ├── VIRTUALBOX_SETUP_GUIDE.txt  # Step-by-Step Guest VM Snapshot & Setup Manual
 ├── project report.md           # Comprehensive Architecture & Pre-Launch Audit Report
+├── SITE_OPERATIONS_GUIDE.txt   # Step-by-Step Public Live Operations & Management Manual
+├── start_live.bat              # One-Click Live Production Launcher (Flask + Cloudflare)
+├── stop_live.bat               # One-Click Live Production Shutdown Script
 ├── static/
 │   ├── favicon.ico             # Terminal Shield Application Icon
 │   └── js/
@@ -174,6 +177,23 @@ Refer to [VIRTUALBOX_SETUP_GUIDE.txt](VIRTUALBOX_SETUP_GUIDE.txt) for instructio
 python app.py
 ```
 Access the dashboard at `http://127.0.0.1:5000` (or `https://` if behind a reverse proxy).
+
+### Public Internet Deployment (Cloudflare Tunnel)
+To immediately publish the platform to the public internet with a free SSL/TLS certificate and DDoS protection:
+
+**Option 1: One-Click Quick Launch**
+- Run `start_live.bat` (launches Flask + Cloudflare Tunnel in parallel).
+- Run `stop_live.bat` (instantly halts the tunnel and frees port 5000).
+
+**Option 2: Command Line**
+```bash
+# Terminal 1: Start backend
+python app.py
+
+# Terminal 2: Expose via Cloudflare Tunnel (HTTP/2 transport)
+cloudflared tunnel --protocol http2 --url http://127.0.0.1:5000
+```
+Detailed teardown, reboot, and permanent custom domain setup instructions are available in [SITE_OPERATIONS_GUIDE.txt](SITE_OPERATIONS_GUIDE.txt).
 
 ### Production Deployment (Gunicorn + Eventlet / Gevent)
 ```bash
