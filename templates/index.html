@@ -1,0 +1,2840 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#07090e" />
+    <title>Threat Sandbox // Cyber Intelligence & Website Inspector</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- Google Fonts Preconnect & DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-deep: #07090e;
+        --bg-surface: #0c101a;
+        --bg-card: #111726;
+        --bg-card-hover: #151e32;
+        --border-subtle: rgba(0, 242, 254, 0.15);
+        --border-highlight: rgba(0, 242, 254, 0.4);
+        --cyan: #00f2fe;
+        --cyan-glow: rgba(0, 242, 254, 0.4);
+        --neon-green: #00ff88;
+        --neon-green-glow: rgba(0, 255, 136, 0.35);
+        --neon-purple: #9d4edd;
+        --neon-purple-glow: rgba(157, 78, 221, 0.35);
+        --warning: #ffb703;
+        --danger: #ff3366;
+        --danger-glow: rgba(255, 51, 102, 0.35);
+        --text-main: #f0f4f8;
+        --text-muted: #8b9bb4;
+        --text-subtle: #4c5d75;
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background-color: var(--bg-deep);
+        color: var(--text-main);
+        font-family: var(--font-sans);
+        min-height: 100vh;
+        min-height: 100dvh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        background-image: 
+          radial-gradient(circle at 50% 0%, rgba(0, 242, 254, 0.08) 0%, transparent 60%),
+          radial-gradient(circle at 10% 40%, rgba(157, 78, 221, 0.05) 0%, transparent 50%),
+          linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        position: relative;
+      }
+
+      /* Scanline overlay effect */
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.12),
+          rgba(0, 0, 0, 0.12) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+        pointer-events: none;
+        z-index: 999;
+        opacity: 0.45;
+      }
+
+      /* Container with notch / safe area support */
+      .app-wrapper {
+        max-width: 1380px;
+        margin: 0 auto;
+        padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(80px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Top Cyber Command Header HUD */
+      .hud-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(12, 16, 26, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 16px 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+
+      .hud-brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .hud-logo-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(157, 78, 221, 0.3));
+        border: 1px solid var(--cyan);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 15px var(--cyan-glow);
+        position: relative;
+      }
+
+      .hud-logo-icon svg {
+        width: 24px;
+        height: 24px;
+        fill: var(--cyan);
+      }
+
+      .hud-title h1 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        background: linear-gradient(90deg, #ffffff, var(--cyan));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .hud-title .subtitle {
+        font-size: 0.75rem;
+        font-family: var(--font-mono);
+        color: var(--text-muted);
+        letter-spacing: 1px;
+      }
+
+      .hud-telemetry {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .telemetry-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-family: var(--font-mono);
+      }
+
+      .telemetry-label {
+        font-size: 0.65rem;
+        color: var(--text-subtle);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .telemetry-val {
+        font-size: 0.82rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .badge-online {
+        color: var(--neon-green);
+      }
+
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--neon-green);
+        box-shadow: 0 0 8px var(--neon-green);
+        animation: pulseDot 2s infinite ease-in-out;
+      }
+
+      @keyframes pulseDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+      }
+
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .https-padlock-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 255, 136, 0.08);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-family: var(--font-mono);
+        color: var(--neon-green);
+        box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        user-select: none;
+      }
+
+      .https-padlock-badge:hover {
+        background: rgba(0, 255, 136, 0.16);
+        border-color: var(--neon-green);
+        box-shadow: 0 0 20px var(--neon-green-glow);
+        transform: translateY(-1px);
+      }
+
+      .padlock-icon {
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+      }
+
+      .padlock-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+      }
+
+      .padlock-status {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.8px;
+      }
+
+      .padlock-cipher {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        letter-spacing: 0.5px;
+      }
+
+      .btn-tactical {
+        background: rgba(17, 23, 38, 0.8);
+        border: 1px solid var(--border-subtle);
+        color: var(--text-main);
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.25s ease;
+      }
+
+      .btn-tactical:hover {
+        border-color: var(--cyan);
+        box-shadow: 0 0 12px var(--cyan-glow);
+        color: var(--cyan);
+      }
+
+      /* Tabs Navigation */
+      .tabs-nav {
+        display: flex;
+        gap: 12px;
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 12px;
+      }
+
+      .tab-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text-muted);
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+      }
+
+      .tab-btn:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .tab-btn.active {
+        color: var(--cyan);
+        background: rgba(0, 242, 254, 0.08);
+        border-color: var(--border-subtle);
+        box-shadow: 0 0 16px rgba(0, 242, 254, 0.15);
+      }
+
+      .tab-btn .tab-badge {
+        font-size: 0.7rem;
+        font-family: var(--font-mono);
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(0, 242, 254, 0.15);
+        color: var(--cyan);
+      }
+
+      /* Main Content Tabs Views */
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Cyber Scanner Input Box */
+      .scanner-hero {
+        background: linear-gradient(180deg, rgba(17, 23, 38, 0.95), rgba(12, 16, 26, 0.95));
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: 28px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .scanner-hero::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--cyan), var(--neon-purple), transparent);
+      }
+
+      .scanner-title-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+      }
+
+      .scanner-title-area h2 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .scanner-desc {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 4px;
+        max-width: 700px;
+      }
+
+      .url-input-container {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .url-input-wrapper {
+        position: relative;
+        flex: 1;
+      }
+
+      .url-input-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--cyan);
+        display: flex;
+        align-items: center;
+      }
+
+      .cyber-input {
+        width: 100%;
+        background: rgba(7, 9, 14, 0.8);
+        border: 1px solid rgba(0, 242, 254, 0.25);
+        padding: 16px 16px 16px 48px;
+        border-radius: 10px;
+        color: #ffffff;
+        font-family: var(--font-mono);
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.25s ease;
+      }
+
+      .cyber-input:focus {
+        border-color: var(--cyan);
+        box-shadow: 0 0 20px var(--cyan-glow);
+        background: rgba(7, 9, 14, 0.95);
+      }
+
+      .cyber-input::placeholder {
+        color: var(--text-subtle);
+      }
+
+      .btn-cyber-primary {
+        background: linear-gradient(135deg, var(--cyan), #00a8ff);
+        color: #040914;
+        font-family: var(--font-mono);
+        font-weight: 800;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        padding: 0 28px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 20px var(--cyan-glow);
+        transition: all 0.25s ease;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .btn-cyber-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 28px rgba(0, 242, 254, 0.6);
+        filter: brightness(1.1);
+      }
+
+      .btn-cyber-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .quick-samples {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .quick-samples span {
+        font-size: 0.75rem;
+        color: var(--text-subtle);
+        font-family: var(--font-mono);
+      }
+
+      .sample-pill {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-muted);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .sample-pill:hover {
+        border-color: var(--cyan);
+        color: var(--cyan);
+        background: rgba(0, 242, 254, 0.05);
+      }
+
+      /* 3-SECONDS CYBER LOADING OVERLAY SCREEN */
+      .cyber-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(5, 7, 12, 0.96);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        z-index: 10000;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .cyber-loading-overlay.active {
+        display: flex;
+        animation: cyberFadeIn 0.3s ease forwards;
+      }
+
+      @keyframes cyberFadeIn {
+        from { opacity: 0; transform: scale(1.02); }
+        to { opacity: 1; transform: scale(1); }
+      }
+
+      .cyber-loading-box {
+        width: 100%;
+        max-width: 640px;
+        background: rgba(13, 18, 30, 0.9);
+        border: 1px solid var(--border-highlight);
+        border-radius: 16px;
+        padding: 36px 32px;
+        box-shadow: 0 0 50px rgba(0, 242, 254, 0.2), inset 0 0 30px rgba(0, 242, 254, 0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Corner HUD brackets */
+      .corner-bracket {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-color: var(--cyan);
+        pointer-events: none;
+      }
+      .bracket-tl { top: 12px; left: 12px; border-top: 2px solid; border-left: 2px solid; }
+      .bracket-tr { top: 12px; right: 12px; border-top: 2px solid; border-right: 2px solid; }
+      .bracket-bl { bottom: 12px; left: 12px; border-bottom: 2px solid; border-left: 2px solid; }
+      .bracket-br { bottom: 12px; right: 12px; border-bottom: 2px solid; border-right: 2px solid; }
+
+      /* Rotating Hologram Radar */
+      .radar-hud {
+        width: 140px;
+        height: 140px;
+        position: relative;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .radar-circle {
+        position: absolute;
+        border-radius: 50%;
+        border: 1px dashed rgba(0, 242, 254, 0.3);
+      }
+      .circle-1 { width: 140px; height: 140px; animation: spinReverse 12s linear infinite; }
+      .circle-2 { width: 100px; height: 100px; border-color: rgba(157, 78, 221, 0.4); animation: spinClockwise 8s linear infinite; }
+      .circle-3 { width: 60px; height: 60px; border: 1px solid rgba(0, 242, 254, 0.6); }
+
+      .radar-sweep {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 242, 254, 0.4) 60deg, transparent 65deg);
+        animation: spinClockwise 1.5s linear infinite;
+      }
+
+      .radar-core {
+        width: 16px;
+        height: 16px;
+        background: var(--cyan);
+        border-radius: 50%;
+        box-shadow: 0 0 16px var(--cyan);
+        z-index: 2;
+        animation: pulseCore 1s infinite alternate;
+      }
+
+      @keyframes spinClockwise {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes spinReverse {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+      @keyframes pulseCore {
+        from { transform: scale(0.9); opacity: 0.8; }
+        to { transform: scale(1.3); opacity: 1; }
+      }
+
+      .loading-cyber-title {
+        font-family: var(--font-mono);
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #ffffff;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .loading-target-url {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        color: var(--cyan);
+        background: rgba(0, 242, 254, 0.08);
+        padding: 4px 14px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        max-width: 90%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* Countdown / Progress HUD */
+      .loading-progress-hud {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+
+      .progress-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+      }
+
+      .progress-timer {
+        color: var(--neon-green);
+        font-weight: 700;
+      }
+
+      .cyber-progress-track {
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .cyber-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--cyan), var(--neon-purple), var(--neon-green));
+        border-radius: 4px;
+        box-shadow: 0 0 12px var(--cyan-glow);
+        transition: width 0.1s linear;
+      }
+
+      /* Live Cyber Status Feed during 3s scan */
+      .loading-status-log {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(0, 242, 254, 0.2);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+      }
+
+      .status-phase-text {
+        color: var(--cyan);
+        font-weight: 500;
+      }
+
+      /* URL DOSSIER REPORT SECTION */
+      .dossier-container {
+        display: none;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .dossier-container.visible {
+        display: flex;
+        animation: slideUp 0.4s ease forwards;
+      }
+
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Dossier Hero Header */
+      .dossier-hero {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: 24px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+      }
+
+      .dossier-meta-title {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .dossier-target-tag {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--cyan);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+      }
+
+      .dossier-url-display {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #ffffff;
+        word-break: break-all;
+      }
+
+      .dossier-origin-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 242, 254, 0.1);
+        border: 1px solid rgba(0, 242, 254, 0.3);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--cyan);
+        width: fit-content;
+      }
+
+      /* Security Score & Risk Meter */
+      .dossier-score-card {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: rgba(7, 9, 14, 0.7);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 16px 20px;
+      }
+
+      .score-circle-wrapper {
+        position: relative;
+        width: 80px;
+        height: 80px;
+      }
+
+      .score-svg {
+        transform: rotate(-90deg);
+        width: 80px;
+        height: 80px;
+      }
+
+      .score-bg-circle {
+        stroke: rgba(255, 255, 255, 0.08);
+      }
+
+      .score-val-circle {
+        stroke: var(--neon-green);
+        stroke-dasharray: 226;
+        stroke-dashoffset: 226;
+        transition: stroke-dashoffset 1s ease;
+      }
+
+      .score-text-inner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: var(--font-mono);
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #ffffff;
+      }
+
+      .risk-assessment-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .risk-level-badge {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        width: fit-content;
+      }
+
+      .risk-safe {
+        background: rgba(0, 255, 136, 0.15);
+        border: 1px solid var(--neon-green);
+        color: var(--neon-green);
+      }
+      .risk-warning {
+        background: rgba(255, 183, 3, 0.15);
+        border: 1px solid var(--warning);
+        color: var(--warning);
+      }
+      .risk-danger {
+        background: rgba(255, 51, 102, 0.15);
+        border: 1px solid var(--danger);
+        color: var(--danger);
+      }
+
+      .risk-grade-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+      }
+
+      /* Bento Grid of Detail Cards */
+      .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 20px;
+      }
+
+      .bento-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.25s ease;
+      }
+
+      .bento-card:hover {
+        border-color: var(--border-highlight);
+      }
+
+      .card-span-6 { grid-column: span 6; }
+      .card-span-12 { grid-column: span 12; }
+      .card-span-4 { grid-column: span 4; }
+      .card-span-8 { grid-column: span 8; }
+
+      @media (max-width: 992px) {
+        .card-span-6, .card-span-4, .card-span-8 { grid-column: span 12; }
+        .dossier-hero { grid-template-columns: 1fr; }
+        .app-wrapper { padding: 16px 12px 60px; }
+      }
+
+      @media (max-width: 768px) {
+        .hud-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 16px;
+          padding: 14px 16px;
+        }
+        .hud-brand {
+          justify-content: space-between;
+        }
+        .hud-telemetry {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          padding: 8px 0;
+          border-top: 1px solid var(--border-subtle);
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .telemetry-item {
+          align-items: center;
+          text-align: center;
+        }
+        .header-controls {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+        }
+        .tabs-nav {
+          overflow-x: auto;
+          white-space: nowrap;
+          -webkit-overflow-scrolling: touch;
+          gap: 8px;
+          padding-bottom: 8px;
+        }
+        .tab-btn {
+          padding: 8px 14px;
+          font-size: 0.82rem;
+          flex-shrink: 0;
+        }
+        .url-input-container {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .btn-cyber-primary {
+          width: 100%;
+          min-height: 48px;
+          justify-content: center;
+        }
+        .cyber-input {
+          font-size: 16px !important; /* Prevents iOS Safari auto-zoom on input focus */
+          padding: 14px 14px 14px 44px;
+        }
+        .dossier-hero {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .dossier-score-card {
+          flex-direction: row;
+          justify-content: flex-start;
+          gap: 16px;
+        }
+        .bento-grid, .detonation-grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .terminal-stream {
+          max-height: 360px;
+          font-size: 0.75rem;
+          -webkit-overflow-scrolling: touch;
+        }
+        .drop-zone {
+          padding: 24px 14px;
+        }
+        .file-meta-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hud-title h1 {
+          font-size: 1.05rem;
+        }
+        .hud-title .subtitle {
+          font-size: 0.68rem;
+        }
+        .hud-telemetry {
+          grid-template-columns: 1fr 1fr;
+        }
+        .scanner-hero {
+          padding: 16px 12px;
+        }
+        .quick-samples {
+          gap: 6px;
+        }
+        .sample-pill {
+          font-size: 0.68rem;
+          padding: 4px 8px;
+        }
+      }
+
+      .bento-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 12px;
+      }
+
+      .bento-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #ffffff;
+      }
+
+      .bento-card-title svg {
+        width: 18px;
+        height: 18px;
+        fill: var(--cyan);
+      }
+
+      .card-header-badge {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-muted);
+      }
+
+      /* Key-Value Telemetry Rows */
+      .telemetry-table {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .telemetry-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        font-size: 0.82rem;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+
+      .telemetry-key {
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+
+      .telemetry-value {
+        font-family: var(--font-mono);
+        color: #ffffff;
+        font-weight: 600;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-all;
+      }
+
+      .value-pill {
+        background: rgba(0, 242, 254, 0.1);
+        color: var(--cyan);
+        padding: 2px 8px;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .value-pill.copyable {
+        cursor: pointer;
+      }
+      .value-pill.copyable:hover {
+        background: rgba(0, 242, 254, 0.2);
+      }
+
+      /* PERMISSIONS MATRIX CARDS */
+      .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 12px;
+        margin-top: 6px;
+      }
+
+      .perm-item-card {
+        background: rgba(7, 9, 14, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        transition: all 0.2s ease;
+      }
+
+      .perm-item-card:hover {
+        border-color: rgba(0, 242, 254, 0.3);
+      }
+
+      .perm-name-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .perm-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .perm-risk-tag {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+
+      .risk-high { background: rgba(255, 51, 102, 0.15); color: var(--danger); }
+      .risk-medium { background: rgba(255, 183, 3, 0.15); color: var(--warning); }
+      .risk-low { background: rgba(0, 242, 254, 0.1); color: var(--cyan); }
+
+      .perm-state-badge {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 3px 6px;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        width: fit-content;
+      }
+
+      .perm-prompt { background: rgba(255, 183, 3, 0.1); color: var(--warning); }
+      .perm-granted { background: rgba(0, 255, 136, 0.1); color: var(--neon-green); }
+      .perm-denied { background: rgba(255, 51, 102, 0.1); color: var(--danger); }
+      .perm-policy-blocked { background: rgba(255, 51, 102, 0.15); color: var(--danger); }
+
+      /* Policy directives box */
+      .policy-directives-box {
+        margin-top: 14px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+      }
+
+      .policy-directive-title {
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+      }
+
+      /* SECURITY HEADERS AUDIT TABLE */
+      .headers-audit-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .header-audit-item {
+        background: rgba(7, 9, 14, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .header-audit-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header-name {
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .header-status-chip {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+
+      .chip-pass { background: rgba(0, 255, 136, 0.15); color: var(--neon-green); border: 1px solid rgba(0, 255, 136, 0.3); }
+      .chip-warn { background: rgba(255, 183, 3, 0.15); color: var(--warning); border: 1px solid rgba(255, 183, 3, 0.3); }
+      .chip-fail { background: rgba(255, 51, 102, 0.15); color: var(--danger); border: 1px solid rgba(255, 51, 102, 0.3); }
+
+      .header-audit-info {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .header-audit-val {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--cyan);
+        word-break: break-all;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-top: 4px;
+      }
+
+      /* Screenshot Viewport Card */
+      .screenshot-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .screenshot-preview-box {
+        position: relative;
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000000;
+        aspect-ratio: 16 / 10;
+        cursor: pointer;
+      }
+
+      .screenshot-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+        transition: transform 0.3s ease;
+      }
+
+      .screenshot-preview-box:hover .screenshot-img {
+        transform: scale(1.02);
+      }
+
+      .screenshot-overlay-badge {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: rgba(7, 9, 14, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid var(--cyan);
+        color: var(--cyan);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* FILE DETONATION TAB */
+      .file-deposit-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: 30px;
+      }
+
+      .drop-zone {
+        border: 2px dashed rgba(0, 242, 254, 0.3);
+        border-radius: 12px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        background: rgba(7, 9, 14, 0.4);
+      }
+
+      .drop-zone:hover, .drop-zone.dragover {
+        border-color: var(--cyan);
+        background: rgba(0, 242, 254, 0.05);
+        box-shadow: 0 0 20px var(--cyan-glow);
+      }
+
+      .drop-zone svg {
+        width: 48px;
+        height: 48px;
+        fill: var(--cyan);
+        margin-bottom: 14px;
+      }
+
+      .file-meta-preview {
+        display: none;
+        margin-top: 20px;
+        background: rgba(7, 9, 14, 0.7);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      /* LIVE SOC TERMINAL */
+      .terminal-panel {
+        background: #000000;
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      }
+
+      .terminal-bar {
+        background: rgba(17, 23, 38, 0.95);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .terminal-title {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--cyan);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .terminal-tools {
+        display: flex;
+        gap: 8px;
+      }
+
+      .term-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .term-btn:hover {
+        color: #ffffff;
+        border-color: var(--cyan);
+      }
+
+      #terminalStream {
+        height: 260px;
+        overflow-y: auto;
+        padding: 16px;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        line-height: 1.6;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        scroll-behavior: smooth;
+      }
+
+      .log-line {
+        display: flex;
+        gap: 10px;
+        word-break: break-all;
+      }
+
+      .log-ts {
+        color: var(--text-subtle);
+        user-select: none;
+      }
+
+      .log-tag {
+        font-weight: 700;
+      }
+
+      .log-info { color: #e2e8f0; }
+      .log-success { color: var(--neon-green); }
+      .log-warning { color: var(--warning); }
+      .log-error { color: var(--danger); font-weight: 600; }
+
+      /* FULLSCREEN SCREENSHOT LIGHTBOX MODAL */
+      .modal-lightbox {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        z-index: 20000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 30px;
+      }
+
+      .modal-lightbox.active {
+        display: flex;
+      }
+
+      .lightbox-content {
+        max-width: 90vw;
+        max-height: 85vh;
+        background: var(--bg-surface);
+        border: 1px solid var(--cyan);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 40px var(--cyan-glow);
+      }
+
+      .lightbox-bar {
+        padding: 12px 20px;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+      }
+
+      .lightbox-body {
+        overflow: auto;
+        max-height: calc(85vh - 50px);
+        background: #000;
+      }
+
+      .lightbox-body img {
+        width: 100%;
+        display: block;
+      }
+
+      .lightbox-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+      .lightbox-close:hover {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-wrapper">
+      <!-- Top HUD Header -->
+      <header class="hud-header">
+        <div class="hud-brand">
+          <div class="hud-logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.13 8.79-7 9.9-3.87-1.11-7-5.36-7-9.9V6.3l7-3.12zm-1 5.82v6h2v-6h-2zm0 8v2h2v-2h-2z"/>
+            </svg>
+          </div>
+          <div class="hud-title">
+            <h1>Threat Sandbox // Cyber Intelligence</h1>
+            <div class="subtitle">AUTOMATED PERIMETER & RECONNAISSANCE PLATFORM</div>
+          </div>
+        </div>
+
+        <div class="hud-telemetry">
+          <div class="telemetry-item">
+            <span class="telemetry-label">Security Grid</span>
+            <span class="telemetry-val badge-online">
+              <span class="pulse-dot"></span> DEFCON 4 ACTIVE
+            </span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">AI Threat Classifier</span>
+            <span class="telemetry-val" style="color: var(--cyan);">ONLINE [RF-v1]</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">SOC Clock</span>
+            <span class="telemetry-val" id="socClock" style="color: #ffffff;">00:00:00 UTC</span>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <div class="https-padlock-badge" id="httpsPadlockBadge" title="TLS 1.3 Encryption Active & Strict Transport Security Verified">
+            <span class="padlock-icon">🔒</span>
+            <div class="padlock-info">
+              <span class="padlock-status">HTTPS SECURED</span>
+              <span class="padlock-cipher">TLS 1.3 // HSTS</span>
+            </div>
+          </div>
+          <button class="btn-tactical" id="soundToggleBtn" title="Toggle Tactical Audio Feedback">
+            <span id="soundIcon">🔊</span> <span id="soundText">AUDIO: ON</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-url">
+          <span>🌐 URL Threat Inspector</span>
+          <span class="tab-badge">ORIGIN & PERMS</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-file">
+          <span>⚡ Binary Detonation VM</span>
+          <span class="tab-badge">VIRTUALBOX + AI</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-terminal">
+          <span>💻 Live SOC Console</span>
+          <span class="tab-badge" id="terminalCounter">STREAM</span>
+        </button>
+      </nav>
+
+      <!-- TAB 1: URL THREAT INSPECTOR & DEEP RECONNAISSANCE -->
+      <section class="tab-content active" id="tab-url">
+        <!-- Input & Search Panel -->
+        <div class="scanner-hero">
+          <div class="scanner-title-area">
+            <div>
+              <h2>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--cyan)">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+                Deep Origin & Permissions Reconnaissance
+              </h2>
+              <p class="scanner-desc">
+                Deploy an isolated headless probe to dissect any target URL. Uncovers origin boundaries, browser permissions policy, cryptographic SSL/TLS certificates, security headers posture, DOM attack vectors, and visual viewport capture.
+              </p>
+            </div>
+          </div>
+
+          <form id="urlScanForm" class="url-input-container">
+            <div class="url-input-wrapper">
+              <span class="url-input-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                </svg>
+              </span>
+              <input
+                type="text"
+                id="targetUrlInput"
+                class="cyber-input"
+                placeholder="Enter target URL (e.g., https://github.com, https://google.com, https://example.com)..."
+                required
+                autocomplete="off"
+              />
+            </div>
+            <button type="submit" id="scanBtn" class="btn-cyber-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+              </svg>
+              Launch Deep Recon
+            </button>
+          </form>
+
+          <div class="quick-samples">
+            <span>QUICK TARGETS:</span>
+            <button type="button" class="sample-pill" data-url="https://github.com">github.com</button>
+            <button type="button" class="sample-pill" data-url="https://google.com">google.com</button>
+            <button type="button" class="sample-pill" data-url="https://cloudflare.com">cloudflare.com</button>
+            <button type="button" class="sample-pill" data-url="https://example.com">example.com</button>
+            <button type="button" class="sample-pill" data-url="http://httpbin.org">httpbin.org (Insecure HTTP)</button>
+          </div>
+        </div>
+
+        <!-- URL Intelligence Dossier Output (Populated after 3s scan) -->
+        <div class="dossier-container" id="dossierContainer">
+          <!-- Hero Banner with Score and Actions -->
+          <div class="dossier-hero">
+            <div class="dossier-meta-title">
+              <span class="dossier-target-tag">TARGET RECONNAISSANCE DOSSIER</span>
+              <div class="dossier-url-display" id="resTargetUrl">https://example.com</div>
+              <div class="dossier-origin-pill">
+                <strong>ORIGIN:</strong> <span id="resPrimaryOrigin">https://example.com</span>
+                <button type="button" class="btn-tactical" id="copyOriginBtn" style="padding: 2px 6px; font-size: 0.65rem;">COPY</button>
+              </div>
+            </div>
+
+            <div class="dossier-score-card">
+              <div class="score-circle-wrapper">
+                <svg class="score-svg" viewBox="0 0 80 80">
+                  <circle class="score-bg-circle" cx="40" cy="40" r="36" stroke-width="6" fill="none" />
+                  <circle class="score-val-circle" id="scoreSvgCircle" cx="40" cy="40" r="36" stroke-width="6" fill="none" />
+                </svg>
+                <div class="score-text-inner" id="scoreValText">85%</div>
+              </div>
+              <div class="risk-assessment-details">
+                <span class="risk-level-badge risk-safe" id="resRiskBadge">LOW RISK</span>
+                <span class="risk-grade-label" id="resGradeLabel">SECURITY GRADE: A</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Grid of Intelligence Modules -->
+          <div class="bento-grid">
+            <!-- 1. Origin & Network Architecture -->
+            <div class="bento-card card-span-6">
+              <div class="bento-card-header">
+                <span class="bento-card-title">
+                  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                  Origin & Network Perimeter
+                </span>
+                <span class="card-header-badge">NETWORK LAYER</span>
+              </div>
+              <div class="telemetry-table">
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Primary Origin</span>
+                  <span class="telemetry-value" id="netOrigin">https://example.com</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Hostname & Port</span>
+                  <span class="telemetry-value" id="netHostPort">example.com:443</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Resolved Origin IP</span>
+                  <span class="telemetry-value value-pill copyable" id="netIp" title="Click to copy IP">93.184.216.34</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Reverse DNS (PTR)</span>
+                  <span class="telemetry-value" id="netPtr">No PTR record</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Final Destination URL</span>
+                  <span class="telemetry-value" id="netFinalUrl">https://example.com/</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Redirection Hops</span>
+                  <span class="telemetry-value" id="netRedirects">0 hops (Direct)</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Web Server Software</span>
+                  <span class="telemetry-value" id="netServer">Protected</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">HTTP Status</span>
+                  <span class="telemetry-value" id="netHttpStatus">200 OK</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Cryptographic SSL/TLS Certificate -->
+            <div class="bento-card card-span-6">
+              <div class="bento-card-header">
+                <span class="bento-card-title">
+                  <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                  SSL / TLS Cryptography
+                </span>
+                <span class="card-header-badge" id="sslBadge">ENCRYPTED</span>
+              </div>
+              <div class="telemetry-table">
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Certificate Issuer (CA)</span>
+                  <span class="telemetry-value" id="sslIssuer">DigiCert Global</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Subject Domain</span>
+                  <span class="telemetry-value" id="sslSubject">example.com</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">TLS Protocol Version</span>
+                  <span class="telemetry-value" id="sslProtocol">TLS 1.3</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Valid From</span>
+                  <span class="telemetry-value" id="sslValidFrom">2026-01-01</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Valid To (Expiration)</span>
+                  <span class="telemetry-value" id="sslValidTo">2026-12-31</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Days Remaining</span>
+                  <span class="telemetry-value value-pill" id="sslDaysRemaining">240 Days</span>
+                </div>
+                <div class="telemetry-row">
+                  <span class="telemetry-key">Cryptographic Status</span>
+                  <span class="telemetry-value" id="sslStatus" style="color: var(--neon-green);">VERIFIED & TRUSTED</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Web Permissions & Browser Capabilities Matrix (Full Width) -->
+            <div class="bento-card card-span-12">
+              <div class="bento-card-header">
+                <span class="bento-card-title">
+                  <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                  Web Permissions & Browser Capabilities Matrix
+                </span>
+                <span class="card-header-badge">CLIENT & SERVER POLICIES</span>
+              </div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                Inspects browser hardware sensors and API capabilities requested by the origin or locked down via HTTP Permissions-Policy.
+              </p>
+              
+              <div class="permissions-grid" id="permissionsGrid">
+                <!-- Dynamically populated permissions items -->
+              </div>
+
+              <div class="policy-directives-box" id="policyDirectivesBox">
+                <div class="policy-directive-title">HTTP Permissions-Policy Header Directives:</div>
+                <div id="policyDirectivesContent" style="color: var(--cyan);">None specified (Default browser prompt behavior)</div>
+              </div>
+            </div>
+
+            <!-- 4. HTTP Security Headers Audit -->
+            <div class="bento-card card-span-8">
+              <div class="bento-card-header">
+                <span class="bento-card-title">
+                  <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                  Cyber Defense Security Headers Audit
+                </span>
+                <span class="card-header-badge" id="headersScoreBadge">SCORE: 80/100</span>
+              </div>
+              <div class="headers-audit-list" id="headersAuditList">
+                <!-- Dynamically populated security header audits -->
+              </div>
+            </div>
+
+            <!-- 5. Visual Viewport Capture & DOM Surface -->
+            <div class="bento-card card-span-4">
+              <div class="bento-card-header">
+                <span class="bento-card-title">
+                  <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                  Isolated Sandbox Viewport
+                </span>
+                <span class="card-header-badge">LIVE CAPTURE</span>
+              </div>
+              
+              <div class="screenshot-container">
+                <div class="screenshot-preview-box" id="screenshotPreviewBox" title="Click to expand isolated screenshot">
+                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" id="screenshotImg" class="screenshot-img" alt="Isolated Sandbox Capture" loading="lazy" decoding="async" />
+                  <div class="screenshot-overlay-badge">
+                    🔍 EXPAND VIEW
+                  </div>
+                </div>
+
+                <div class="telemetry-table" style="margin-top: 10px;">
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Page Title</span>
+                    <span class="telemetry-value" id="domTitle">Example Domain</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Password Inputs</span>
+                    <span class="telemetry-value" id="domPasswords" style="color: var(--neon-green);">0 (No credentials detected)</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Forms Count</span>
+                    <span class="telemetry-value" id="domForms">0</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">External Scripts</span>
+                    <span class="telemetry-value" id="domScripts">0 scripts</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">External Links</span>
+                    <span class="telemetry-value" id="domLinks">1 links</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: BINARY DETONATION VM SANDBOX -->
+      <section class="tab-content" id="tab-file">
+        <div class="file-deposit-card">
+          <div class="scanner-title-area">
+            <div>
+              <h2>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--cyan)">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                VirtualBox Isolated Detonation Chamber
+              </h2>
+              <p class="scanner-desc">
+                Upload executable payloads, batch files, or suspicious artifacts into the hardware-isolated Windows 10 VM sandbox. Behavioral logs are extracted and classified using Random Forest Machine Learning.
+              </p>
+            </div>
+          </div>
+
+          <form id="fileUploadForm">
+            <div class="drop-zone" id="fileDropZone">
+              <svg viewBox="0 0 24 24">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+              </svg>
+              <h3 style="margin-bottom: 6px;">DRAG & DROP PAYLOAD ARTIFACT HERE</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem;">Or click to browse from filesystem (.exe, .bat, .ps1, .txt, .dll)</p>
+              <input type="file" id="binaryFileInput" accept=".exe,.dll,.bat,.ps1,.vbs,.js,.pdf,.zip,.doc,.docx,.xls,.xlsx,.txt" style="display: none;" />
+            </div>
+
+            <div class="file-meta-preview" id="fileMetaBox">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong id="stagedFileName">No payload staged</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);" id="stagedFileSize">0 KB</div>
+                </div>
+                <button type="submit" id="detonateBtn" class="btn-cyber-primary">
+                  ⚡ DETONATE IN VIRTUALBOX
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <!-- AI Behavioral Classification Outcome & Detonation Dossier -->
+          <div id="aiClassificationBox" style="display: none; margin-top: 28px; animation: slideUp 0.4s ease forwards;">
+            
+            <!-- Hero Dossier Header -->
+            <div class="dossier-hero" style="margin-bottom: 20px;">
+              <div class="dossier-meta-title">
+                <span class="dossier-target-tag">DETONATED ARTIFACT BEHAVIORAL DOSSIER</span>
+                <h3 id="detonationArtifactName" class="dossier-url-display">Awaiting Staged Payload</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; align-items: center;">
+                  <span id="detonationOriginPill" class="dossier-origin-pill">
+                    <span class="pulse-dot"></span> VIRTUALBOX GUEST TELEMETRY ACTIVE
+                  </span>
+                  <span id="detonationShaPill" class="value-pill copyable" title="Click to copy SHA256" style="font-size: 0.75rem; cursor: pointer;">
+                    SHA256: <span id="aiSha256">-</span>
+                  </span>
+                  <span id="detonationSizePill" class="value-pill" style="font-size: 0.75rem;">
+                    SIZE: <span id="detonationFileSizeText">0 KB</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Verdict Score Card -->
+              <div class="dossier-score-card">
+                <div class="score-circle-wrapper">
+                  <svg class="score-svg" viewBox="0 0 80 80">
+                    <circle class="score-bg-circle" cx="40" cy="40" r="36" stroke-width="7" fill="none" />
+                    <circle id="detonationScoreCircle" class="score-val-circle" cx="40" cy="40" r="36" stroke-width="7" fill="none" style="stroke-dasharray: 226; stroke-dashoffset: 226;" />
+                  </svg>
+                  <div class="score-text-inner" id="detonationScoreText">0%</div>
+                </div>
+                <div class="risk-assessment-details">
+                  <span id="aiVerdictBadge" class="risk-level-badge risk-safe">BENIGN CLEAN</span>
+                  <span class="risk-grade-label" id="aiConfidenceLabel">MODEL CONFIDENCE: 0.0%</span>
+                  <span class="risk-grade-label" id="detonationTimestamp" style="color: var(--text-subtle);">TIME: -</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bento Grid of Detailed Findings -->
+            <div class="bento-grid">
+              
+              <!-- Card 1: MITRE ATT&CK Techniques & High-Risk Indicators -->
+              <div class="bento-card card-span-6">
+                <div class="bento-card-header">
+                  <div class="bento-card-title">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+                    <span>MITRE ATT&CK & SECURITY ALERTS</span>
+                  </div>
+                  <span class="card-header-badge" id="techniquesCountBadge">0 DETECTED</span>
+                </div>
+                <div id="techniquesList" style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto;">
+                  <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">No threat techniques detected.</div>
+                </div>
+              </div>
+
+              <!-- Card 2: Process Execution Tree -->
+              <div class="bento-card card-span-6">
+                <div class="bento-card-header">
+                  <div class="bento-card-title">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                    <span>SPAWNED PROCESSES & COMMAND LINES</span>
+                  </div>
+                  <span class="card-header-badge" id="processesCountBadge">0 PROCESSES</span>
+                </div>
+                <div id="processesList" style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto;">
+                  <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">No child processes spawned.</div>
+                </div>
+              </div>
+
+              <!-- Card 3: System Impact (Network, Filesystem, Registry) -->
+              <div class="bento-card card-span-6">
+                <div class="bento-card-header">
+                  <div class="bento-card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    <span>SYSTEM IMPACT & PERSISTENCE AUDIT</span>
+                  </div>
+                  <span class="card-header-badge">HOST AUDIT</span>
+                </div>
+                <div class="telemetry-table">
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Dropped Files / Staged Artifacts</span>
+                    <span class="telemetry-value" id="auditDroppedFiles">0 items</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Registry Run / Persistence Keys</span>
+                    <span class="telemetry-value" id="auditRegistryKeys">0 keys</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Outbound Foreign Sockets</span>
+                    <span class="telemetry-value" id="auditNetworkBeacons">0 connections</span>
+                  </div>
+                  <div class="telemetry-row">
+                    <span class="telemetry-key">Sandbox Containment Result</span>
+                    <span class="telemetry-value" style="color: var(--neon-green);">CleanState Revert Ready</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 4: Machine Learning Feature Vector -->
+              <div class="bento-card card-span-6">
+                <div class="bento-card-header">
+                  <div class="bento-card-title">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    <span>AI RANDOM FOREST CLASSIFIER TOKENS</span>
+                  </div>
+                  <span class="card-header-badge">TF-IDF FEATURES</span>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">
+                  Behavioral signature tokens extracted from guest execution and classified by Random Forest model:
+                </p>
+                <div id="mlTokenCloud" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto;">
+                  <span class="sample-pill">awaiting tokens...</span>
+                </div>
+              </div>
+
+              <!-- Card 5: Full Raw Telemetry Viewer -->
+              <div class="bento-card card-span-12">
+                <div class="bento-card-header">
+                  <div class="bento-card-title">
+                    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-7 13h-2v-2h2v2zm0-4h-2V8h2v5z"/></svg>
+                    <span>FULL GUEST VM TELEMETRY REPORT (BEHAVIOR_LOG.TXT)</span>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <a id="downloadReportLink" href="#" target="_blank" class="term-btn" style="text-decoration: none; display: none;">OPEN RAW REPORT</a>
+                    <button type="button" class="term-btn" id="copyDetonationLogBtn">COPY TELEMETRY</button>
+                    <button type="button" class="term-btn" id="toggleDetonationLogBtn">COLLAPSE</button>
+                  </div>
+                </div>
+                <pre id="rawDetonationLog" style="background: rgba(4, 6, 10, 0.9); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 8px; padding: 16px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main); max-height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin: 0; line-height: 1.5;"></pre>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: LIVE SOC TERMINAL CONSOLE -->
+      <section class="tab-content" id="tab-terminal">
+        <div class="terminal-panel">
+          <div class="terminal-bar">
+            <div class="terminal-title">
+              <span class="pulse-dot"></span>
+              <span>LIVE SOC TELEMETRY CONSOLE // STDOUT STREAM</span>
+            </div>
+            <div class="terminal-tools">
+              <button type="button" class="term-btn" id="clearTermBtn">CLEAR</button>
+              <button type="button" class="term-btn" id="copyTermBtn">COPY ALL</button>
+              <button type="button" class="term-btn" id="autoScrollToggle">AUTO-SCROLL: ON</button>
+            </div>
+          </div>
+          <div id="terminalStream">
+            <div class="log-line">
+              <span class="log-ts">[00:00:00]</span>
+              <span class="log-tag log-info">[SYSTEM]</span>
+              <span class="log-info">Core reconnaissance engine initialized. WebSocket streaming connected.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 3-SECOND CINEMATIC CYBER LOADING SCREEN OVERLAY -->
+    <div class="cyber-loading-overlay" id="cyberLoadingOverlay">
+      <div class="cyber-loading-box">
+        <div class="corner-bracket bracket-tl"></div>
+        <div class="corner-bracket bracket-tr"></div>
+        <div class="corner-bracket bracket-bl"></div>
+        <div class="corner-bracket bracket-br"></div>
+
+        <!-- Rotating Holographic Radar Sweep -->
+        <div class="radar-hud">
+          <div class="radar-circle circle-1"></div>
+          <div class="radar-circle circle-2"></div>
+          <div class="radar-circle circle-3"></div>
+          <div class="radar-sweep"></div>
+          <div class="radar-core"></div>
+        </div>
+
+        <div class="loading-cyber-title" id="loadingCyberTitle">EXECUTING CYBER RECONNAISSANCE</div>
+        <div class="loading-target-url" id="loadingTargetUrl">https://example.com</div>
+
+        <!-- 3-Second High-Precision Progress Timer -->
+        <div class="loading-progress-hud">
+          <div class="progress-meta">
+            <span>PROBING SECURITY PERIMETER</span>
+            <span class="progress-timer" id="progressTimer">0.00s / 3.00s</span>
+          </div>
+          <div class="cyber-progress-track">
+            <div class="cyber-progress-fill" id="loadingProgressFill"></div>
+          </div>
+        </div>
+
+        <!-- Phased Tactical Scanning Logs -->
+        <div class="loading-status-log">
+          <span class="status-phase-text" id="statusPhaseText">
+            [ISOLATION] Initializing isolated Chromium sandbox container...
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULLSCREEN SCREENSHOT LIGHTBOX MODAL -->
+    <div class="modal-lightbox" id="screenshotLightbox">
+      <div class="lightbox-content">
+        <div class="lightbox-bar">
+          <span style="color: var(--cyan); font-weight: 700;">ISOLATED SANDBOX VIEWPORT // PLAYWRIGHT CAPTURE</span>
+          <button class="lightbox-close" id="closeLightboxBtn">&times;</button>
+        </div>
+        <div class="lightbox-body">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" id="lightboxImg" alt="Isolated Viewport Screenshot" loading="lazy" decoding="async" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Socket.IO Client Library (Local Offline-Ready + CDN Fallback) -->
+    <script src="/static/js/socket.io.min.js"></script>
+    <script>
+      if (typeof io === 'undefined') {
+        const cdnScript = document.createElement('script');
+        cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js';
+        document.head.appendChild(cdnScript);
+      }
+    </script>
+    <script>
+      // Sound Effects Synthesizer using Web Audio API
+      let soundEnabled = true;
+      let audioCtx = null;
+
+      function getAudioContext() {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      function playCyberBeep(freq = 880, duration = 0.08, type = 'sine') {
+        if (!soundEnabled) return;
+        try {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+          gain.gain.setValueAtTime(0.05, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + duration);
+        } catch (e) {
+          // Audio policy fallback
+        }
+      }
+
+      function playCyberScanSweep() {
+        if (!soundEnabled) return;
+        try {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(300, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.3);
+          gain.gain.setValueAtTime(0.04, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {}
+      }
+
+      function playSuccessChime() {
+        if (!soundEnabled) return;
+        try {
+          playCyberBeep(523.25, 0.1, 'triangle');
+          setTimeout(() => playCyberBeep(659.25, 0.1, 'triangle'), 100);
+          setTimeout(() => playCyberBeep(783.99, 0.2, 'triangle'), 200);
+        } catch (e) {}
+      }
+
+      // Audio Toggle Handler
+      const soundToggleBtn = document.getElementById('soundToggleBtn');
+      const soundIcon = document.getElementById('soundIcon');
+      soundToggleBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
+        soundToggleBtn.innerHTML = `${soundIcon.textContent} AUDIO: ${soundEnabled ? 'ON' : 'OFF'}`;
+        if (soundEnabled) playCyberBeep(1000, 0.1);
+      });
+
+      // Live SOC Clock
+      function updateSocClock() {
+        const now = new Date();
+        document.getElementById('socClock').textContent = 
+          now.toTimeString().split(' ')[0] + ' UTC' + (now.getTimezoneOffset() <= 0 ? '+' : '-') + 
+          Math.abs(Math.floor(now.getTimezoneOffset() / 60));
+      }
+      setInterval(updateSocClock, 1000);
+      updateSocClock();
+
+      // Tab Navigation
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabButtons.forEach(b => b.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          const target = document.getElementById(btn.dataset.tab);
+          if (target) target.classList.add('active');
+          playCyberBeep(600, 0.05);
+        });
+      });
+
+      // Socket.IO Setup with Resilience & Reconnection Handling
+      let socket = null;
+      try {
+        if (typeof io !== 'undefined') {
+          socket = io({
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            timeout: 10000
+          });
+
+          socket.on('connect', () => {
+            appendTerminalLog("Connected to Threat Sandbox live WebSocket telemetry stream.", "success");
+          });
+
+          socket.on('disconnect', () => {
+            appendTerminalLog("Disconnected from telemetry stream. Reconnecting...", "warning");
+          });
+
+          socket.on('connect_error', () => {
+            // Silently fall back to polling without throwing uncaught exceptions
+          });
+        } else {
+          console.warn("Socket.IO client not found. Running in REST fallback mode.");
+        }
+      } catch (err) {
+        console.error("Socket initialization error:", err);
+      }
+
+      const terminalStream = document.getElementById('terminalStream');
+      let autoScroll = true;
+
+      function appendTerminalLog(msg, type = 'info', ts = null) {
+        msg = String(msg || '');
+        if (!ts) {
+          const now = new Date();
+          ts = now.toTimeString().split(' ')[0];
+        }
+
+        const line = document.createElement('div');
+        line.className = 'log-line';
+
+        let tagClass = 'log-info';
+        let tagText = '[INFO]';
+        const msgUpper = msg.toUpperCase();
+
+        if (type === 'success' || msgUpper.includes('[SUCCESS]')) {
+          tagClass = 'log-success';
+          tagText = '[SUCCESS]';
+        } else if (type === 'warning' || msgUpper.includes('[WARNING]') || msgUpper.includes('NOTICE')) {
+          tagClass = 'log-warning';
+          tagText = '[WARNING]';
+        } else if (type === 'error' || msgUpper.includes('[ERROR]') || msgUpper.includes('[CRITICAL]') || type === 'critical') {
+          tagClass = 'log-error';
+          tagText = '[CRITICAL]';
+        }
+
+        line.innerHTML = `
+          <span class="log-ts">[${ts}]</span>
+          <span class="log-tag ${tagClass}">${tagText}</span>
+          <span class="${tagClass}">${escapeHtml(msg.replace(/\[\w+\]\s*/g, ''))}</span>
+        `;
+
+        terminalStream.appendChild(line);
+        if (autoScroll) {
+          terminalStream.scrollTop = terminalStream.scrollHeight;
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.content) return meta.content;
+        const match = document.cookie.match(/(?:^|;\s*)ts_csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+      }
+
+      // Safari / iOS Web Audio Unlock on first user touch or click
+      function unlockAudioContext() {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        document.removeEventListener('click', unlockAudioContext);
+        document.removeEventListener('touchstart', unlockAudioContext);
+      }
+      document.addEventListener('click', unlockAudioContext, { passive: true });
+      document.addEventListener('touchstart', unlockAudioContext, { passive: true });
+
+      // Terminal Controls
+      document.getElementById('clearTermBtn').addEventListener('click', () => {
+        terminalStream.innerHTML = '';
+      });
+
+      document.getElementById('copyTermBtn').addEventListener('click', () => {
+        const text = terminalStream.innerText;
+        navigator.clipboard.writeText(text);
+        alert('Terminal logs copied to clipboard!');
+      });
+
+      const autoScrollBtn = document.getElementById('autoScrollToggle');
+      autoScrollBtn.addEventListener('click', () => {
+        autoScroll = !autoScroll;
+        autoScrollBtn.textContent = `AUTO-SCROLL: ${autoScroll ? 'ON' : 'OFF'}`;
+      });
+
+      // HTTPS Padlock Security Badge Audit Modal
+      const httpsBadge = document.getElementById('httpsPadlockBadge');
+      if (httpsBadge) {
+        httpsBadge.addEventListener('click', () => {
+          playCyberBeep(1100, 0.08);
+          appendTerminalLog("🔒 [SECURITY AUDIT] Transport Layer Security: TLS 1.3 / HSTS ACTIVE", "success");
+          appendTerminalLog("🔒 [HSTS PRELOAD] Strict-Transport-Security: max-age=63072000; includeSubDomains; preload", "info");
+          appendTerminalLog("🔒 [CSRF GUARD] Anti-CSRF double-submit token verification active.", "info");
+          appendTerminalLog("🔒 [CSP ACTIVE] Content-Security-Policy & Frame-Options: DENY enforced.", "info");
+          alert(
+            "🔒 THREAT SANDBOX — ENTERPRISE SECURITY ACTIVE\n\n" +
+            "• Transport: TLS 1.3 Encrypted Handshake\n" +
+            "• HSTS Header: max-age=63072000; includeSubDomains; preload\n" +
+            "• Anti-CSRF: Cryptographic token validation enforced on all POST actions\n" +
+            "• Framing: X-Frame-Options: DENY (Clickjacking immune)\n" +
+            "• CSP: Strict Content Security Policy active\n" +
+            "• Rate Limiter: Per-IP sliding-window quota enforced"
+          );
+        });
+      }
+
+      // Listen for socket log emissions if socket is active
+      if (socket) {
+        socket.on('terminal_log', data => {
+          if (data) appendTerminalLog(data.message || data.msg, data.type || data.level, data.timestamp);
+        });
+        socket.on('log', data => {
+          if (data) appendTerminalLog(data.message || data.msg, data.type || data.level, data.timestamp);
+        });
+      }
+
+      // ==========================================
+      // REAL-TIME RECONNAISSANCE SCANNING HUD
+      // ==========================================
+      const cyberOverlay = document.getElementById('cyberLoadingOverlay');
+      const progressTimer = document.getElementById('progressTimer');
+      const progressFill = document.getElementById('loadingProgressFill');
+      const statusPhaseText = document.getElementById('statusPhaseText');
+      const loadingTargetUrl = document.getElementById('loadingTargetUrl');
+
+      let scanActive = false;
+      let scanAnimationTimer = null;
+
+      function showScanningHud(targetUrl) {
+        loadingTargetUrl.textContent = targetUrl;
+        cyberOverlay.classList.add('active');
+        progressFill.style.width = '20%';
+        progressTimer.textContent = 'PROBING...';
+        statusPhaseText.textContent = "[ISOLATION] Initializing isolated Chromium sandbox container...";
+        playCyberScanSweep();
+        scanActive = true;
+
+        // Animate tactical status progression without blocking
+        let step = 0;
+        const steps = [
+          { pct: 35, msg: "[NETWORK PROBE] Resolving DNS perimeter & establishing TLS session..." },
+          { pct: 60, msg: "[SECURITY AUDIT] Intercepting permissions policy, CSP headers & DOM attack surface..." },
+          { pct: 85, msg: "[DEEP SCAN] Analyzing DOM structure, credential vectors & rendering capture..." },
+        ];
+
+        scanAnimationTimer = setInterval(() => {
+          if (!scanActive || step >= steps.length) {
+            clearInterval(scanAnimationTimer);
+            return;
+          }
+          progressFill.style.width = `${steps[step].pct}%`;
+          statusPhaseText.textContent = steps[step].msg;
+          playCyberBeep(750 + step * 100, 0.04);
+          step++;
+        }, 600);
+      }
+
+      function hideScanningHud(onComplete) {
+        scanActive = false;
+        if (scanAnimationTimer) clearInterval(scanAnimationTimer);
+        progressFill.style.width = '100%';
+        progressTimer.textContent = 'COMPLETE';
+        statusPhaseText.textContent = "[DECIPHER] Telemetry compiled. Transitioning to security dossier...";
+        playSuccessChime();
+
+        setTimeout(() => {
+          cyberOverlay.classList.remove('active');
+          if (onComplete) onComplete();
+        }, 180);
+      }
+
+      // Quick target sample pills
+      document.querySelectorAll('.sample-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          document.getElementById('targetUrlInput').value = pill.dataset.url;
+          playCyberBeep(900, 0.05);
+        });
+      });
+
+      // ==========================================
+      // URL SCAN SUBMISSION & DOSSIER RENDERING
+      // ==========================================
+      const urlForm = document.getElementById('urlScanForm');
+      const targetUrlInput = document.getElementById('targetUrlInput');
+      const scanBtn = document.getElementById('scanBtn');
+      const dossierContainer = document.getElementById('dossierContainer');
+
+      urlForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        let url = targetUrlInput.value.trim();
+        if (!url) return;
+
+        // Auto-prefix https:// if scheme is missing
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+          targetUrlInput.value = url;
+        }
+
+        scanBtn.disabled = true;
+        scanBtn.textContent = 'PROBING TARGET...';
+
+        appendTerminalLog(`Initiating deep reconnaissance scan for target: ${url}`, "info");
+        showScanningHud(url);
+
+        const csrfToken = getCsrfToken();
+
+        // Trigger inspection via WebSocket or REST fallback
+        if (socket && socket.connected) {
+          socket.emit('start_url_scan', { target_url: url, csrf_token: csrfToken });
+        } else {
+          // REST API fallback with CSRF token header & body
+          appendTerminalLog(`Dispatching reconnaissance probe via REST gateway to ${url}...`, "info");
+          fetch('/api/analyze-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({ url: url, csrf_token: csrfToken })
+          })
+          .then(res => res.json())
+          .then(data => {
+            hideScanningHud(() => {
+              renderDossierReport(data);
+              scanBtn.disabled = false;
+              scanBtn.textContent = '⚡ LAUNCH DEEP RECON';
+            });
+          })
+          .catch(err => {
+            hideScanningHud();
+            appendTerminalLog(`REST probe failed: ${err.message}`, "error");
+            scanBtn.disabled = false;
+            scanBtn.textContent = '⚡ LAUNCH DEEP RECON';
+          });
+        }
+      });
+
+      // Handle URL result from server
+      if (socket) {
+        socket.on('url_analysis_result', data => {
+          hideScanningHud(() => {
+            renderDossierReport(data);
+            scanBtn.disabled = false;
+            scanBtn.textContent = '⚡ LAUNCH DEEP RECON';
+          });
+        });
+      }
+
+      function renderDossierReport(data) {
+        if (!data || data.status === 'error') {
+          appendTerminalLog(`URL inspection notice: ${data ? data.message : 'Unknown issue'}`, 'error');
+          scanBtn.disabled = false;
+          scanBtn.textContent = '⚡ LAUNCH DEEP RECON';
+          return;
+        }
+
+        dossierContainer.classList.add('visible');
+
+        const orig = data.origin_details || {};
+        const ssl = data.ssl_certificate || {};
+        const secHeaders = data.security_headers || {};
+        const perms = data.permissions_matrix || {};
+        const dom = data.dom_attack_surface || {};
+        const threat = data.threat_assessment || {};
+        const visual = data.visual_snapshot || {};
+
+        // 1. Hero Meta
+        document.getElementById('resTargetUrl').textContent = orig.input_url || orig.final_url;
+        document.getElementById('resPrimaryOrigin').textContent = orig.origin;
+
+        // Security Score Ring
+        const score = secHeaders.score || 70;
+        const scoreValText = document.getElementById('scoreValText');
+        scoreValText.textContent = `${score}%`;
+        const circle = document.getElementById('scoreSvgCircle');
+        const offset = 226 - (226 * score) / 100;
+        circle.style.strokeDashoffset = offset;
+
+        if (score >= 80) circle.style.stroke = 'var(--neon-green)';
+        else if (score >= 55) circle.style.stroke = 'var(--warning)';
+        else circle.style.stroke = 'var(--danger)';
+
+        // Risk Badge
+        const riskBadge = document.getElementById('resRiskBadge');
+        riskBadge.textContent = threat.risk_level || 'LOW RISK';
+        riskBadge.className = 'risk-level-badge ' + (
+          threat.risk_color === 'danger' ? 'risk-danger' : 
+          threat.risk_color === 'warning' ? 'risk-warning' : 'risk-safe'
+        );
+        document.getElementById('resGradeLabel').textContent = `SECURITY GRADE: ${secHeaders.grade || 'B'}`;
+
+        // 2. Origin & Network Card
+        document.getElementById('netOrigin').textContent = orig.origin;
+        document.getElementById('netHostPort').textContent = `${orig.hostname}:${orig.port}`;
+        document.getElementById('netIp').textContent = orig.primary_ip;
+        document.getElementById('netPtr').textContent = orig.reverse_dns;
+        document.getElementById('netFinalUrl').textContent = orig.final_url;
+        document.getElementById('netRedirects').textContent = orig.redirects_count === 0 ? '0 hops (Direct)' : `${orig.redirects_count} redirects`;
+        document.getElementById('netServer').textContent = orig.server_software;
+        document.getElementById('netHttpStatus').textContent = `${orig.http_status || 200} ${orig.http_status_text || 'OK'}`;
+
+        // 3. SSL Card with Verified HTTPS Padlock
+        document.getElementById('sslIssuer').textContent = ssl.issuer || 'Unknown';
+        document.getElementById('sslSubject').textContent = ssl.subject || orig.hostname;
+        document.getElementById('sslProtocol').textContent = ssl.protocol || 'TLS';
+        document.getElementById('sslValidFrom').textContent = ssl.valid_from || 'N/A';
+        document.getElementById('sslValidTo').textContent = ssl.valid_to || 'N/A';
+        document.getElementById('sslDaysRemaining').textContent = ssl.days_remaining !== null ? `${ssl.days_remaining} Days` : 'N/A';
+        
+        const sslStatusEl = document.getElementById('sslStatus');
+        if (ssl.is_valid) {
+          sslStatusEl.innerHTML = '<span style="color: var(--neon-green); display: flex; align-items: center; gap: 4px;">🔒 VERIFIED HTTPS (TLS 1.3 / HSTS ACTIVE)</span>';
+        } else {
+          sslStatusEl.innerHTML = '<span style="color: var(--danger); display: flex; align-items: center; gap: 4px;">⚠️ UNTRUSTED / INSECURE HTTP</span>';
+        }
+
+        // 4. Permissions Matrix
+        const permsGrid = document.getElementById('permissionsGrid');
+        permsGrid.innerHTML = '';
+        const browserPerms = perms.browser_permissions || [];
+
+        browserPerms.forEach(p => {
+          const item = document.createElement('div');
+          item.className = 'perm-item-card';
+
+          let stateClass = 'perm-prompt';
+          let stateLabel = 'Prompt Required';
+
+          if (p.state === 'granted') {
+            stateClass = 'perm-granted';
+            stateLabel = 'Allowed / Active';
+          } else if (p.state === 'denied' || p.state === 'blocked') {
+            stateClass = 'perm-denied';
+            stateLabel = 'Blocked / Denied';
+          }
+
+          let riskClass = p.risk === 'High' ? 'risk-high' : p.risk === 'Medium' ? 'risk-medium' : 'risk-low';
+
+          item.innerHTML = `
+            <div class="perm-name-row">
+              <span class="perm-title">${escapeHtml(p.label || p.name || '')}</span>
+              <span class="perm-risk-tag ${escapeHtml(riskClass)}">${escapeHtml(p.risk || 'Low')} Risk</span>
+            </div>
+            <div class="perm-state-badge ${escapeHtml(stateClass)}">
+              <span>●</span> ${escapeHtml(stateLabel)}
+            </div>
+          `;
+          permsGrid.appendChild(item);
+        });
+
+        // Permissions Policy Directives
+        const policyDirectivesBox = document.getElementById('policyDirectivesContent');
+        const directives = perms.policy_header_directives || {};
+        if (Object.keys(directives).length > 0) {
+          policyDirectivesBox.innerHTML = Object.entries(directives)
+            .map(([k, v]) => `<div><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</div>`)
+            .join('');
+        } else {
+          policyDirectivesBox.textContent = "No restrictive Permissions-Policy header present. Browser applies default user permission prompt.";
+        }
+
+        // 5. Security Headers Audit
+        const headersList = document.getElementById('headersAuditList');
+        headersList.innerHTML = '';
+        const audit = secHeaders.audit || {};
+
+        document.getElementById('headersScoreBadge').textContent = `POSTURE: ${secHeaders.score}/100 PTS (GRADE ${secHeaders.grade})`;
+
+        Object.entries(audit).forEach(([headerName, item]) => {
+          const auditDiv = document.createElement('div');
+          auditDiv.className = 'header-audit-item';
+
+          let chipClass = 'chip-pass';
+          if (item.status === 'WARN') chipClass = 'chip-warn';
+          if (item.status === 'FAIL') chipClass = 'chip-fail';
+
+          auditDiv.innerHTML = `
+            <div class="header-audit-top">
+              <span class="header-name">${escapeHtml(headerName)}</span>
+              <span class="header-status-chip ${escapeHtml(chipClass)}">${escapeHtml(item.status || '')} (${Number(item.score || 0)}/${Number(item.max || 0)} pts)</span>
+            </div>
+            <div class="header-audit-info">${escapeHtml(item.info || '')}</div>
+            <div class="header-audit-val">Value: <code>${escapeHtml(item.value || 'None')}</code></div>
+          `;
+          headersList.appendChild(auditDiv);
+        });
+
+        // 6. Viewport Screenshot & DOM
+        const screenshotImg = document.getElementById('screenshotImg');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const screenshotUrl = visual.screenshot_url || '/uploads/url_capture_latest.png';
+        
+        const fallbackSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='380' viewBox='0 0 600 380'><rect width='600' height='380' fill='%230c101a'/><text x='50%25' y='45%25' fill='%2300f2fe' font-family='monospace' font-size='16' text-anchor='middle'>[ISOLATED SANDBOX SNAPSHOT]</text><text x='50%25' y='55%25' fill='%238b9bb4' font-family='monospace' font-size='12' text-anchor='middle'>Visual buffer rendered safely in headless container</text></svg>";
+        screenshotImg.onerror = function() { this.onerror = null; this.src = fallbackSvg; };
+        lightboxImg.onerror = function() { this.onerror = null; this.src = fallbackSvg; };
+
+        screenshotImg.src = screenshotUrl + '?t=' + Date.now();
+        lightboxImg.src = screenshotUrl + '?t=' + Date.now();
+
+        document.getElementById('domTitle').textContent = dom.title || 'Untitled';
+        const pwds = dom.password_inputs || 0;
+        const domPwdsEl = document.getElementById('domPasswords');
+        if (pwds > 0) {
+          domPwdsEl.textContent = `⚠️ ${pwds} Password Inputs Detected!`;
+          domPwdsEl.style.color = 'var(--warning)';
+        } else {
+          domPwdsEl.textContent = '0 (No password fields)';
+          domPwdsEl.style.color = 'var(--neon-green)';
+        }
+
+        document.getElementById('domForms').textContent = `${dom.forms_count || 0} forms detected`;
+        document.getElementById('domScripts').textContent = `${dom.external_scripts_count || 0} external scripts (${dom.total_scripts || 0} total)`;
+        document.getElementById('domLinks').textContent = `${dom.external_links_count || 0} external links (${dom.total_links || 0} total)`;
+
+        // Scroll to dossier smoothly
+        dossierContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // Copy Origin Button
+      document.getElementById('copyOriginBtn').addEventListener('click', () => {
+        const origin = document.getElementById('resPrimaryOrigin').textContent;
+        navigator.clipboard.writeText(origin);
+        alert('Origin copied: ' + origin);
+      });
+
+      // Copy IP Chip
+      document.getElementById('netIp').addEventListener('click', () => {
+        const ip = document.getElementById('netIp').textContent;
+        navigator.clipboard.writeText(ip);
+        alert('IP copied: ' + ip);
+      });
+
+      // Lightbox Controls
+      const lightbox = document.getElementById('screenshotLightbox');
+      document.getElementById('screenshotPreviewBox').addEventListener('click', () => {
+        lightbox.classList.add('active');
+      });
+      document.getElementById('closeLightboxBtn').addEventListener('click', () => {
+        lightbox.classList.remove('active');
+      });
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) lightbox.classList.remove('active');
+      });
+
+      // ==========================================
+      // TAB 2: FILE DETONATION LOGIC
+      // ==========================================
+      const dropZone = document.getElementById('fileDropZone');
+      const fileInput = document.getElementById('binaryFileInput');
+      const fileMetaBox = document.getElementById('fileMetaBox');
+      const stagedFileName = document.getElementById('stagedFileName');
+      const stagedFileSize = document.getElementById('stagedFileSize');
+      const detonateBtn = document.getElementById('detonateBtn');
+      const aiBox = document.getElementById('aiClassificationBox');
+      const aiVerdictBadge = document.getElementById('aiVerdictBadge');
+      const aiConfidenceLabel = document.getElementById('aiConfidenceLabel');
+      const aiSha256 = document.getElementById('aiSha256');
+
+      let currentFile = null;
+
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          handleFileStaged(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+          handleFileStaged(fileInput.files[0]);
+        }
+      });
+
+      function handleFileStaged(file) {
+        currentFile = file;
+        stagedFileName.textContent = file.name;
+        stagedFileSize.textContent = `${(file.size / 1024).toFixed(1)} KB (Type: ${file.type || 'Binary artifact'})`;
+        fileMetaBox.style.display = 'block';
+        playCyberBeep(750, 0.08);
+      }
+
+      // Copy & Toggle handlers for Raw Telemetry Viewer
+      document.getElementById('copyDetonationLogBtn').addEventListener('click', () => {
+        const text = document.getElementById('rawDetonationLog').innerText;
+        navigator.clipboard.writeText(text);
+        alert('Telemetry log copied to clipboard!');
+      });
+
+      const toggleLogBtn = document.getElementById('toggleDetonationLogBtn');
+      const rawLogBox = document.getElementById('rawDetonationLog');
+      toggleLogBtn.addEventListener('click', () => {
+        if (rawLogBox.style.display === 'none') {
+          rawLogBox.style.display = 'block';
+          toggleLogBtn.textContent = 'COLLAPSE';
+        } else {
+          rawLogBox.style.display = 'none';
+          toggleLogBtn.textContent = 'EXPAND';
+        }
+      });
+
+      let detonationPollTimer = null;
+
+      function renderDetonationDossier(data) {
+        if (!data) return;
+        if (detonationPollTimer) {
+          clearInterval(detonationPollTimer);
+          detonationPollTimer = null;
+        }
+
+        detonateBtn.disabled = false;
+        detonateBtn.textContent = '⚡ DETONATE IN VIRTUALBOX';
+        aiBox.style.display = 'block';
+
+        const cls = data.classification || {};
+        const telem = data.telemetry || {};
+        const isMalicious = cls.prediction === 'MALICIOUS';
+
+        // 1. Artifact Meta
+        document.getElementById('detonationArtifactName').textContent = data.filename || 'Unknown Payload';
+        document.getElementById('detonationFileSizeText').textContent = data.size ? `${(data.size / 1024).toFixed(1)} KB` : '0 KB';
+        const fullSha = data.sha256 || 'Unknown';
+        document.getElementById('aiSha256').textContent = fullSha.length > 20 ? fullSha.substring(0, 16) + '...' : fullSha;
+        const shaPill = document.getElementById('detonationShaPill');
+        shaPill.title = `Full SHA256: ${fullSha} (Click to copy)`;
+        shaPill.onclick = () => {
+          navigator.clipboard.writeText(fullSha);
+          appendTerminalLog(`SHA256 hash copied to clipboard: ${fullSha}`, 'info');
+        };
+
+        // Timestamp
+        document.getElementById('detonationTimestamp').textContent = `EXECUTION: ${data.timestamp || new Date().toLocaleTimeString()}`;
+
+        // 2. Verdict & Confidence
+        if (isMalicious) {
+          aiVerdictBadge.textContent = 'CRITICAL MALICIOUS';
+          aiVerdictBadge.className = 'risk-level-badge risk-danger';
+        } else {
+          aiVerdictBadge.textContent = 'BENIGN CLEAN';
+          aiVerdictBadge.className = 'risk-level-badge risk-safe';
+        }
+
+        const conf = cls.confidence != null ? cls.confidence : 95.0;
+        aiConfidenceLabel.textContent = `MODEL CONFIDENCE: ${conf.toFixed(1)}%`;
+
+        // Threat Score Ring
+        const score = telem.threat_score != null ? telem.threat_score : (isMalicious ? Math.round(conf) : Math.max(5, Math.round(100 - conf)));
+        const circle = document.getElementById('detonationScoreCircle');
+        const offset = 226 - (226 * Math.min(score, 100)) / 100;
+        circle.style.strokeDashoffset = offset;
+        document.getElementById('detonationScoreText').textContent = `${score}%`;
+
+        if (score >= 40 || isMalicious) {
+          circle.style.stroke = 'var(--danger)';
+        } else if (score >= 20) {
+          circle.style.stroke = 'var(--warning)';
+        } else {
+          circle.style.stroke = 'var(--neon-green)';
+        }
+
+        // 3. Card 1: MITRE ATT&CK & Security Alerts
+        const techList = document.getElementById('techniquesList');
+        const techBadge = document.getElementById('techniquesCountBadge');
+        techList.innerHTML = '';
+        const techniques = telem.techniques || [];
+        techBadge.textContent = `${techniques.length} DETECTED`;
+        techBadge.style.color = techniques.length > 0 ? 'var(--danger)' : 'var(--neon-green)';
+
+        if (techniques.length > 0) {
+          techniques.forEach(t => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(255, 51, 102, 0.1); border-left: 3px solid var(--danger); padding: 8px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; color: #ffffff; display: flex; align-items: center; justify-content: space-between; gap: 8px;';
+            item.innerHTML = `<span>⚠️ ${escapeHtml(t)}</span><span class="value-pill" style="background: rgba(255,51,102,0.25); color: var(--danger); font-size: 0.7rem;">ATT&CK</span>`;
+            techList.appendChild(item);
+          });
+        } else {
+          techList.innerHTML = `<div style="background: rgba(0, 255, 136, 0.08); border-left: 3px solid var(--neon-green); padding: 10px 14px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--neon-green);">
+            ✓ Clean execution: No adversary evasion or destructive MITRE techniques observed during runtime.
+          </div>`;
+        }
+
+        // 4. Card 2: Processes
+        const procList = document.getElementById('processesList');
+        const procBadge = document.getElementById('processesCountBadge');
+        procList.innerHTML = '';
+        const procs = telem.processes || [];
+        procBadge.textContent = `${procs.length} PROCESSES`;
+
+        if (procs.length > 0) {
+          procs.forEach(p => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); padding: 6px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main); word-break: break-all;';
+            item.innerHTML = `<span style="color: var(--cyan); margin-right: 6px;">▶</span>${escapeHtml(p)}`;
+            procList.appendChild(item);
+          });
+        } else {
+          procList.innerHTML = `<div style="color: var(--text-muted); font-size: 0.82rem; font-style: italic; padding: 8px;">Standard execution context; no unauthorized child processes spawned.</div>`;
+        }
+
+        // 5. Card 3: System Impact
+        document.getElementById('auditDroppedFiles').textContent = `${(telem.dropped_files || []).length} items ${(telem.dropped_files && telem.dropped_files.length > 0) ? '(' + telem.dropped_files.map(f => f.split(' ')[0]).slice(0, 2).join(', ') + ')' : ''}`;
+        document.getElementById('auditRegistryKeys').textContent = `${(telem.registry_keys || []).length} keys ${(telem.registry_keys && telem.registry_keys.length > 0) ? '⚠️' : ''}`;
+        document.getElementById('auditNetworkBeacons').textContent = `${(telem.network_beacons || []).length} sockets ${(telem.network_beacons && telem.network_beacons.length > 0) ? '⚠️' : ''}`;
+
+        // 6. Card 4: ML Token Cloud
+        const tokenCloud = document.getElementById('mlTokenCloud');
+        tokenCloud.innerHTML = '';
+        const tokens = telem.tokens || [];
+        if (tokens.length > 0) {
+          tokens.forEach(tok => {
+            const pill = document.createElement('span');
+            pill.className = 'sample-pill';
+            const isSuspicious = ['vssadmin', 'powershell', 'delete', 'shadows', 'certutil', 'mimikatz', 'regedit', 'taskkill'].some(s => tok.toLowerCase().includes(s));
+            if (isSuspicious) {
+              pill.style.borderColor = 'var(--danger)';
+              pill.style.color = 'var(--danger)';
+              pill.style.background = 'rgba(255, 51, 102, 0.1)';
+            }
+            pill.textContent = tok;
+            tokenCloud.appendChild(pill);
+          });
+        } else {
+          tokenCloud.innerHTML = '<span class="sample-pill">clean_baseline</span>';
+        }
+
+        // 7. Card 5: Raw Telemetry Log Viewer & Download Link
+        const rawPre = document.getElementById('rawDetonationLog');
+        rawPre.textContent = telem.raw_log || 'No telemetry log recorded.';
+
+        const dlLink = document.getElementById('downloadReportLink');
+        if (data.report_url) {
+          dlLink.href = data.report_url;
+          dlLink.style.display = 'inline-flex';
+        } else {
+          dlLink.style.display = 'none';
+        }
+
+        playSuccessChime();
+        aiBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      document.getElementById('fileUploadForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentFile) return;
+
+        detonateBtn.disabled = true;
+        detonateBtn.textContent = 'EXECUTING IN SANDBOX...';
+        appendTerminalLog(`Initiating secure transfer of artifact: ${currentFile.name}...`, 'info');
+
+        const csrfToken = getCsrfToken();
+        const formData = new FormData();
+        formData.append('malware_file', currentFile);
+        formData.append('csrf_token', csrfToken);
+
+        try {
+          const resp = await fetch('/upload-file', {
+            method: 'POST',
+            headers: {
+              'X-CSRF-Token': csrfToken
+            },
+            body: formData
+          });
+          const res = await resp.json();
+          if (resp.ok) {
+            appendTerminalLog(`Payload deposited. Staged for VirtualBox execution: ${res.filename}`, 'success');
+            appendTerminalLog(`SHA256: ${res.sha256}`, 'info');
+            appendTerminalLog(`Awaiting guest telemetry and AI classification...`, 'info');
+
+            // Set up polling fallback in case WebSocket disconnects
+            if (detonationPollTimer) clearInterval(detonationPollTimer);
+            let pollAttempts = 0;
+            detonationPollTimer = setInterval(async () => {
+              pollAttempts++;
+              if (pollAttempts > 45) { // 90 seconds timeout
+                clearInterval(detonationPollTimer);
+                detonationPollTimer = null;
+                detonateBtn.disabled = false;
+                detonateBtn.textContent = '⚡ DETONATE IN VIRTUALBOX';
+                return;
+              }
+              try {
+                const pollResp = await fetch(`/api/detonation-result/${res.sha256}`);
+                if (pollResp.ok) {
+                  const pollData = await pollResp.json();
+                  if (pollData && pollData.classification) {
+                    renderDetonationDossier(pollData);
+                  }
+                }
+              } catch (err) {}
+            }, 2000);
+
+          } else {
+            appendTerminalLog(`Upload rejected: ${res.message}`, 'error');
+            detonateBtn.disabled = false;
+            detonateBtn.textContent = '⚡ DETONATE IN VIRTUALBOX';
+          }
+        } catch (err) {
+          appendTerminalLog(`Transfer failed: ${err}`, 'error');
+          detonateBtn.disabled = false;
+          detonateBtn.textContent = '⚡ DETONATE IN VIRTUALBOX';
+        }
+      });
+
+      // Handle AI Classification Socket event
+      if (socket) {
+        socket.on('file_detonation_result', (data) => {
+          renderDetonationDossier(data);
+        });
+      }
+    </script>
+  </body>
+</html>

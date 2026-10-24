@@ -1,0 +1,657 @@
+================================================================================
+          UNIFIED THREAT SANDBOX — VIRTUALBOX VM SETUP & DEPLOYMENT GUIDE
+================================================================================
+Version: 2.5 (Industry Security Hardening & Automated Detonation Edition)
+Target Guest OS: Windows 10 (64-bit)
+Target Hypervisor: Oracle VM VirtualBox 7.x
+
+This document provides complete, step-by-step instructions for creating,
+configuring, and arming the isolated Windows 10 VirtualBox detonation sandbox
+so that the Threat Sandbox web platform can automatically control it, inject
+malware artifacts, monitor behaviors in real-time, extract telemetry logs,
+and restore clean snapshots.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Prerequisites & Host System Preparation
+2. Step 1: Creating the Virtual Machine in VirtualBox
+3. Step 2: Windows 10 Installation & User Account Configuration
+4. Step 3: Installing VirtualBox Guest Additions (Mandatory)
+5. Step 4: Disabling Security Controls & Windows Interfering Services
+6. Step 5: Installing Python 3 Inside the VM
+7. Step 6: Deploying the Guest Telemetry Monitoring Agent (agent.py)
+8. Step 7: Configuring agent.py to Auto-Launch on VM Boot
+9. Step 8: Taking the "CleanState" Snapshot (Critical Step)
+10. Step 9: Host Configuration (.env Setup & Verification)
+11. Appendix: Complete Production Source Code for agent.py
+
+================================================================================
+1. PREREQUISITES & HOST SYSTEM PREPARATION
+================================================================================
+Before configuring the VM, verify that your host PC has:
+  • Oracle VM VirtualBox 7.0 or higher installed:
+    Default path: C:\Program Files\Oracle\VirtualBox\VBoxManage.exe
+  • VirtualBox Extension Pack matching your VirtualBox version.
+  • An official Windows 10 64-bit ISO file (download from Microsoft).
+  • At least 20 GB free disk space and 8 GB host RAM.
+
+================================================================================
+2. STEP 1: CREATING THE VIRTUAL MACHINE IN VIRTUALBOX
+================================================================================
+Open VirtualBox on your host machine and click "New" (or Machine -> New):
+
+  1. Name and Operating System:
+     • Name: Windows10Sandbox
+       (IMPORTANT: Must match VM_NAME in sandbox_controller.py exactly)
+     • Type: Microsoft Windows
+     • Version: Windows 10 (64-bit)
+     • ISO Image: Browse and select your Windows 10 ISO.
+     • Check: "Skip Unattended Installation" (to manually configure user account).
+
+  2. Hardware Allocation:
+     • Base Memory (RAM): Minimum 4096 MB (4 GB). (8192 MB recommended if available).
+     • Processors: Minimum 2 vCPUs (4 vCPUs recommended).
+     • Enable EFI: Leave UNCHECKED (Standard BIOS).
+
+  3. Hard Disk Allocation:
+     • Create a Virtual Hard Disk Now.
+     • Disk Size: 50.00 GB (Dynamically Allocated VDI).
+
+  4. Network Configuration:
+     • Go to VM Settings -> Network -> Adapter 1.
+     • Attached to: NAT (or Host-only Adapter if fully air-gapped).
+     • Advanced -> Promiscuous Mode: Deny.
+     • Cable Connected: Checked.
+
+  5. Display Settings:
+     • Go to VM Settings -> Display.
+     • Video Memory: 128 MB.
+     • Graphics Controller: VBoxSVGA.
+
+Click "OK" to save the virtual machine settings.
+
+================================================================================
+3. STEP 2: WINDOWS 10 INSTALLATION & USER ACCOUNT CONFIGURATION
+================================================================================
+1. Start the VM and boot from the Windows 10 installation media.
+2. Complete the Windows 10 setup:
+   • Choose "Windows 10 Pro" or "Windows 10 Home".
+   • Select "Custom: Install Windows only (advanced)".
+3. When prompted to set up an account:
+   • Choose "Domain join instead" or "Set up for work or school" -> "Offline account"
+     -> "Limited experience" (to create a local offline account).
+   • USERNAME: vboxuser
+     (IMPORTANT: Must match GUEST_USER in sandbox_controller.py)
+   • PASSWORD: SandboxPass@2026!
+     (Or whichever password you choose. If you use a different password,
+      set VBOX_GUEST_PASS in your host .env file).
+   • Security questions: Select any simple answers.
+4. Privacy Settings:
+   • Turn OFF all options (Location, Diagnostic data, Find my device, Inking).
+5. Allow Windows to finish the initial setup and land on the Desktop.
+
+--- RECOMMENDED: CONFIGURE AUTO-LOGON (BYPASS LOCK SCREEN) ---
+To allow the VM to boot straight to the desktop headlessly:
+  1. Press Win + R, type `netplwiz` and press Enter.
+  2. Uncheck "Users must enter a user name and password to use this computer".
+  3. Click Apply, enter your password `SandboxPass@2026!`, confirm, and click OK.
+
+================================================================================
+4. STEP 3: INSTALLING VIRTUALBOX GUEST ADDITIONS (MANDATORY)
+================================================================================
+VirtualBox Guest Additions is required for `VBoxManage guestcontrol` commands
+(file injection, remote command execution, and log retrieval).
+
+1. In the VirtualBox VM top menu bar, click:
+   `Devices` -> `Insert Guest Additions CD image...`
+2. Inside the Windows 10 VM:
+   • Open "File Explorer" -> "This PC" -> CD Drive (D:) VirtualBox Guest Additions.
+   • Double-click `VBoxWindowsAdditions.exe`.
+   • Click "Next" through all defaults, click "Install" on driver prompts.
+   • When installation finishes, select "Reboot now" and restart the VM.
+
+================================================================================
+5. STEP 4: DISABLING SECURITY CONTROLS & INTERFERING SERVICES
+================================================================================
+To prevent Windows Defender or Windows Update from killing malware samples
+before the behavioral agent can observe and record their execution:
+
+1. Disable Windows Defender Real-Time & Tamper Protection:
+   • Open Start Menu -> Settings -> Update & Security -> Windows Security.
+   • Click "Virus & threat protection".
+   • Under "Virus & threat protection settings", click "Manage settings".
+   • Turn OFF:
+     - Real-time protection
+     - Cloud-delivered protection
+     - Automatic sample submission
+     - Tamper Protection
+
+2. Disable SmartScreen:
+   • In Windows Security -> "App & browser control" -> "Reputation-based protection settings".
+   • Turn OFF "Check apps and files" and "SmartScreen for Microsoft Edge".
+
+3. Disable User Account Control (UAC):
+   • Press Win + R, type `UserAccountControlSettings` and press Enter.
+   • Move the slider all the way down to "Never notify". Click OK.
+
+4. Disable Screen Sleep & Lockout:
+   • Go to Settings -> System -> Power & sleep.
+   • Set "Screen" to Never, and "Sleep" to Never.
+
+5. Disable Windows Updates:
+   • Press Win + R, type `services.msc` and press Enter.
+   • Find "Windows Update", double click, set Startup Type to "Disabled", click Stop, and click OK.
+
+================================================================================
+6. STEP 5: INSTALLING PYTHON 3 INSIDE THE VM
+================================================================================
+The guest telemetry agent requires Python 3. Standard library only is used
+(no pip packages required).
+
+1. In the VM browser, download Python 3.10+ (Windows 64-bit installer) from:
+   https://www.python.org/downloads/
+   (Or copy the python installer from the host via VirtualBox Shared Folders or USB).
+2. Run the installer:
+   • CRITICAL: Check the box "Add python.exe to PATH" at the bottom!
+   • Click "Install Now".
+3. Verify installation:
+   • Open Command Prompt inside the VM and type:
+     python --version
+   • You should see `Python 3.10.x` (or newer).
+
+================================================================================
+7. STEP 6: DEPLOYING THE GUEST TELEMETRY MONITORING AGENT (agent.py)
+================================================================================
+1. Inside the Windows 10 VM, create a file on the Desktop named `agent.py`:
+   Target Path: C:\Users\vboxuser\Desktop\agent.py
+2. Copy and paste the full Python source code provided in Section 11 of this
+   guide into that file and save it.
+
+================================================================================
+8. STEP 7: CONFIGURING agent.py TO AUTO-LAUNCH ON VM BOOT
+================================================================================
+To ensure `agent.py` starts immediately every time the sandbox boots:
+
+METHOD 1: STARTUP FOLDER (EASIEST & RECOMMENDED)
+  1. Inside the VM, open PowerShell as Administrator.
+  2. Run the following command:
+     ```powershell
+     $startupDir = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
+     $launcherPath = "$startupDir\start_agent.bat"
+     "@echo off`r`nstart /min pythonw.exe C:\Users\vboxuser\Desktop\agent.py" | Out-File -FilePath $launcherPath -Encoding ascii
+     ```
+  3. Verify that `start_agent.bat` exists in your Startup folder.
+
+METHOD 2: TASK SCHEDULER (ALTERNATIVE)
+  1. Open Command Prompt as Administrator in the VM.
+  2. Run:
+     schtasks /create /tn "ThreatSandboxAgent" /tr "pythonw.exe C:\Users\vboxuser\Desktop\agent.py" /sc onlogon /rl highest /f
+
+--- VERIFY AGENT FUNCTIONALITY ---
+Before taking the snapshot:
+  1. Double click `start_agent.bat` (or run `python C:\Users\vboxuser\Desktop\agent.py`).
+  2. Verify that `behavior_log.txt` is created on your VM Desktop (`C:\Users\vboxuser\Desktop\behavior_log.txt`).
+  3. Open `behavior_log.txt` and check that the header says:
+     "THREAT SANDBOX BEHAVIORAL TELEMETRY AGENT v2.5 (SOC EDITION)"
+  4. Delete `behavior_log.txt` so the snapshot remains completely clean.
+
+================================================================================
+9. STEP 8: TAKING THE "CleanState" SNAPSHOT (CRITICAL STEP)
+================================================================================
+The sandbox automation relies on reverting to a clean snapshot before each
+detonation cycle.
+
+1. Inside the VM, close all applications and shut down the guest cleanly:
+   Command Prompt: `shutdown /s /t 0`
+   Wait until VirtualBox shows the VM state as "Powered Off".
+
+2. On your HOST machine, open Command Prompt or PowerShell and take the snapshot:
+   ```cmd
+   "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" snapshot "Windows10Sandbox" take "CleanState"
+   ```
+   (Alternatively, in the VirtualBox GUI: Select "Windows10Sandbox" -> Click the
+    hamburger menu icon next to the VM -> Snapshots -> Click "Take" -> Name it: CleanState).
+
+3. Verify the snapshot:
+   ```cmd
+   "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" snapshot "Windows10Sandbox" list
+   ```
+   Output must show: `Name: CleanState`
+
+================================================================================
+10. STEP 9: HOST CONFIGURATION (.env SETUP & VERIFICATION)
+================================================================================
+1. On your host machine in `threat-sandbox`:
+   Create or edit `.env` (copy from `.env.example`):
+   ```env
+   # Flask Security
+   THREAT_SANDBOX_SECRET=ac080e961083d88f67aec48e24da421206d22430d75e42b00705d24c1960ea87
+
+   # VirtualBox Configuration
+   VBOX_VM_NAME=Windows10Sandbox
+   VBOX_SNAPSHOT_NAME=CleanState
+   VBOX_GUEST_USER=vboxuser
+   VBOX_GUEST_PASS=SandboxPass@2026!
+   ```
+
+2. Test hypervisor execution from host:
+   Run:
+   ```cmd
+   "C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" guestcontrol "Windows10Sandbox" run --exe "C:\Windows\System32\cmd.exe" --username "vboxuser" --password "SandboxPass@2026!" -- cmd.exe /c echo Connection_Successful
+   ```
+
+3. Launch Threat Sandbox on host:
+   ```cmd
+   & ".\.venv\Scripts\python.exe" app.py
+   ```
+4. Navigate to `http://127.0.0.1:5000` -> File Detonation Chamber -> Upload any test sample -> Detonate!
+
+================================================================================
+11. APPENDIX: COMPLETE PRODUCTION SOURCE CODE FOR agent.py
+================================================================================
+Save this exact code as: C:\Users\vboxuser\Desktop\agent.py in the VM:
+
+----------------------------- [START AGENT.PY] ---------------------------------
+"""
+agent.py — High-Fidelity Guest Telemetry Monitoring Agent
+==========================================================
+Part of the Unified Threat Sandbox System.
+Designed to run inside the isolated Windows 10 VM sandbox.
+
+Key Capabilities:
+  - ZERO external dependencies: 100% Python 3 standard library
+  - Real-time Process Creation & Command-Line Monitoring
+  - Filesystem Activity Detection (Desktop, Temp, AppData)
+  - Registry Persistence & Security Tampering Auditing (Run keys, Defender)
+  - Active Network Socket & Foreign Connection Tracking (netstat)
+  - MITRE ATT&CK Behavioral Technique Mapping
+  - Continuous real-time flush to C:\\Users\\<user>\\Desktop\\behavior_log.txt
+  - Token serialization bridge for Random Forest ML behavioral classifier
+"""
+
+import os
+import sys
+import time
+import csv
+import io
+import re
+import socket
+import datetime
+import subprocess
+import threading
+from typing import Dict, Set, List, Tuple
+
+# ---------------------------------------------------------------------------
+# Configuration & Paths
+# ---------------------------------------------------------------------------
+LOG_FILENAME = "behavior_log.txt"
+USER_PROFILE = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+DESKTOP_DIR = os.path.join(USER_PROFILE, "Desktop")
+
+def get_target_log_paths() -> List[str]:
+    """Resolves all candidate paths for behavior_log.txt across Windows configs."""
+    paths = set()
+    userprofile = USER_PROFILE
+    username = os.environ.get("USERNAME", "vboxuser")
+
+    # 1. Check Windows Registry User Shell Folders
+    try:
+        import winreg
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders")
+        desktop, _ = winreg.QueryValueEx(key, "Desktop")
+        desktop = os.path.expandvars(desktop)
+        paths.add(os.path.join(desktop, LOG_FILENAME))
+    except Exception:
+        pass
+
+    # 2. User profile desktop & OneDrive desktop
+    paths.add(os.path.join(userprofile, "Desktop", LOG_FILENAME))
+    paths.add(os.path.join(userprofile, "OneDrive", "Desktop", LOG_FILENAME))
+
+    # 3. Direct drive paths for vboxuser and current user
+    paths.add(rf"C:\Users\{username}\Desktop\{LOG_FILENAME}")
+    paths.add(rf"C:\Users\vboxuser\Desktop\{LOG_FILENAME}")
+
+    return list(paths)
+
+TARGET_LOG_PATHS = get_target_log_paths()
+POLL_INTERVAL_SECS = 1.0
+
+# MITRE ATT&CK Behavioral Signatures
+SUSPICIOUS_COMMANDS = {
+    "vssadmin": ("T1490: Inhibit System Recovery", 40),
+    "delete shadows": ("T1490: Delete Volume Shadow Copies", 50),
+    "wbadmin": ("T1490: Delete Backup Catalogs", 40),
+    "bcdedit": ("T1490: Modify Boot Configuration", 35),
+    "powershell": ("T1059: PowerShell Scripting Engine", 15),
+    "invoke-webrequest": ("T1105: Ingress Tool Transfer (IWR)", 35),
+    "downloadstring": ("T1105: Memory Payload Download", 45),
+    "downloadfile": ("T1105: Remote Payload Staging", 40),
+    "-encodedcommand": ("T1027: Obfuscated Base64 Command", 40),
+    "-enc": ("T1027: Obfuscated Base64 Command", 40),
+    "iex": ("T1059: Interactive Expression Execution", 35),
+    "certutil": ("T1105: Certutil Ingress / LOLBin", 35),
+    "-urlcache": ("T1105: Certutil URL Cache Transfer", 45),
+    "bitsadmin": ("T1105: BITS Background Ingress", 35),
+    "taskkill": ("T1562: Process Termination / Evasion", 25),
+    "msmpeng": ("T1562: Target Windows Defender Engine", 50),
+    "windefend": ("T1562: Tamper Windows Defender Service", 50),
+    "regedit": ("T1112: Direct Registry Modification", 20),
+    "wmic": ("T1047: Windows Management Instrumentation", 20),
+    "shadowcopy delete": ("T1490: Delete Shadow Copies via WMI", 50),
+    "mimikatz": ("T1003: Credential Dumping", 50),
+    "sekurlsa": ("T1003: LSASS Memory Injection", 50),
+    "lsass.exe": ("T1003: Security Subsystem Access", 30),
+    "rundll32": ("T1218: Rundll32 Proxy Execution", 25),
+    "regsvr32": ("T1218: Regsvr32 Scriptlet LOLBin", 35),
+    "mshta": ("T1218: MSHTA HTML Application Exploit", 40),
+    "schtasks": ("T1053: Scheduled Task Persistence", 30),
+    "whoami": ("T1033: User Discovery Reconnaissance", 15),
+    "net user": ("T1087: Local Account Discovery", 20),
+    "net localgroup": ("T1069: Permission Group Discovery", 25),
+    "wevtutil": ("T1070: Event Log Clearing", 40),
+    "cipher /w": ("T1485: Free Space Data Destruction", 45),
+    "curl": ("T1105: Ingress Tool Transfer (Curl)", 20),
+    "cscript": ("T1059: VBScript Host Execution", 20),
+    "wscript": ("T1059: Windows Script Host Execution", 20)
+}
+
+# ---------------------------------------------------------------------------
+# Telemetry Logger
+# ---------------------------------------------------------------------------
+class TelemetryWriter:
+    """Thread-safe, multi-path direct-flushing telemetry log writer."""
+    def __init__(self, target_paths: List[str]):
+        self.target_paths = target_paths
+        self.lock = threading.Lock()
+        self._init_log()
+
+    def _init_log(self):
+        header = (
+            "================================================================================\n"
+            "           THREAT SANDBOX BEHAVIORAL TELEMETRY AGENT v2.5 (SOC EDITION)        \n"
+            "================================================================================\n"
+            f"Session Initialized: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"Target Hostname:    {socket.gethostname()}\n"
+            f"User Context:       {os.environ.get('USERNAME', 'Unknown')}\n"
+            f"Platform:           {sys.platform} (Win32 Telemetry Engine Active)\n"
+            f"Sink Targets:       {', '.join(self.target_paths)}\n"
+            "================================================================================\n\n"
+        )
+        for target in self.target_paths:
+            try:
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "w", encoding="utf-8") as f:
+                    f.write(header)
+                    f.flush()
+            except Exception:
+                pass
+
+    def write_line(self, line: str):
+        with self.lock:
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            entry = f"[{ts}] {line}\n"
+            print(entry.strip())
+
+            for target in self.target_paths:
+                try:
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    with open(target, "a", encoding="utf-8", errors="replace") as f:
+                        f.write(entry)
+                        f.flush()
+                        os.fsync(f.fileno())
+                except Exception:
+                    pass
+
+# Initialize global writer
+writer = TelemetryWriter(TARGET_LOG_PATHS)
+
+# ---------------------------------------------------------------------------
+# Module 1: Process Monitor (Pure Python + Windows tasklist/wmic)
+# ---------------------------------------------------------------------------
+class ProcessMonitor:
+    def __init__(self):
+        self.baseline_pids: Set[int] = set()
+        self.known_processes: Dict[int, Dict] = {}
+        self.captured_tokens: Set[str] = set()
+        self.threat_score = 0
+        self.detected_threats = []
+
+    def get_current_process_list(self) -> Dict[int, Dict]:
+        procs = {}
+        try:
+            cmd = ["tasklist", "/FO", "CSV", "/NH"]
+            res = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=3)
+            if res.returncode == 0:
+                reader = csv.reader(io.StringIO(res.stdout))
+                for row in reader:
+                    if len(row) >= 2:
+                        pname = row[0].strip().strip('"').lower()
+                        try:
+                            pid = int(row[1].strip().strip('"'))
+                            procs[pid] = {
+                                "pid": pid,
+                                "name": pname,
+                                "cmdline": pname
+                            }
+                        except ValueError:
+                            continue
+        except Exception as e:
+            writer.write_line(f"[WARN-PROC] Process query note: {e}")
+
+        try:
+            wmic_cmd = ["wmic", "process", "get", "ProcessId,CommandLine", "/FORMAT:CSV"]
+            wres = subprocess.run(wmic_cmd, capture_output=True, text=True, errors="replace", timeout=3)
+            if wres.returncode == 0:
+                wreader = csv.reader(io.StringIO(wres.stdout))
+                for wrow in wreader:
+                    if len(wrow) >= 3:
+                        try:
+                            wcmd = wrow[1].strip()
+                            wpid = int(wrow[2].strip())
+                            if wpid in procs and wcmd:
+                                procs[wpid]["cmdline"] = wcmd
+                        except (ValueError, IndexError):
+                            continue
+        except Exception:
+            pass
+
+        return procs
+
+    def build_baseline(self):
+        writer.write_line("[*] Establishing baseline system process snapshot...")
+        current = self.get_current_process_list()
+        self.baseline_pids = set(current.keys())
+        self.known_processes = current
+        writer.write_line(f"[+] Baseline established: {len(self.baseline_pids)} background processes registered.")
+
+    def inspect_new_processes(self):
+        current = self.get_current_process_list()
+        current_pids = set(current.keys())
+
+        new_pids = current_pids - self.known_processes.keys()
+
+        for pid in new_pids:
+            pinfo = current[pid]
+            pname = pinfo["name"]
+            cmdline = pinfo.get("cmdline", pname)
+
+            self.captured_tokens.add(pname)
+            writer.write_line(f"[PROCESS-SPAWN] PID: {pid} | Image: {pname} | CommandLine: {cmdline}")
+
+            cmd_lower = cmdline.lower()
+            for pattern, (desc, severity) in SUSPICIOUS_COMMANDS.items():
+                if pattern in cmd_lower:
+                    self.threat_score += severity
+                    threat_entry = f"{pname} -> {desc}"
+                    if threat_entry not in self.detected_threats:
+                        self.detected_threats.append(threat_entry)
+                        self.captured_tokens.add(pattern)
+                        self.captured_tokens.add(pname)
+                        writer.write_line(f"[SECURITY-ALERT] High-Risk Vector: {desc} (Pattern: '{pattern}', Severity: +{severity})")
+
+            self.known_processes[pid] = pinfo
+
+# ---------------------------------------------------------------------------
+# Module 2: Filesystem Activity Monitor
+# ---------------------------------------------------------------------------
+class FileMonitor:
+    def __init__(self):
+        self.watch_dirs = [
+            DESKTOP_DIR,
+            os.environ.get("TEMP", r"C:\Windows\Temp"),
+            os.path.join(USER_PROFILE, "AppData", "Local", "Temp")
+        ]
+        self.seen_files: Set[str] = set()
+
+    def build_baseline(self):
+        for wdir in self.watch_dirs:
+            if os.path.exists(wdir):
+                try:
+                    for root, _, files in os.walk(wdir):
+                        for f in files:
+                            self.seen_files.add(os.path.join(root, f))
+                except Exception:
+                    pass
+        writer.write_line(f"[+] Filesystem baseline registered: {len(self.seen_files)} existing files indexed.")
+
+    def check_changes(self, captured_tokens: Set[str]):
+        for wdir in self.watch_dirs:
+            if not os.path.exists(wdir):
+                continue
+            try:
+                for f in os.listdir(wdir):
+                    fpath = os.path.join(wdir, f)
+                    if fpath not in self.seen_files and os.path.isfile(fpath):
+                        self.seen_files.add(fpath)
+                        if f == LOG_FILENAME:
+                            continue
+                        ext = os.path.splitext(f)[1].lower()
+                        writer.write_line(f"[FILE-DROP] Path: {fpath} ({os.path.getsize(fpath)} bytes)")
+                        if ext in [".exe", ".bat", ".ps1", ".vbs", ".dll", ".js"]:
+                            captured_tokens.add(f.lower())
+                            writer.write_line(f"[FILE-ALERT] Executable/script payload deposited: {f}")
+            except Exception:
+                pass
+
+# ---------------------------------------------------------------------------
+# Module 3: Network Connection Monitor (netstat)
+# ---------------------------------------------------------------------------
+class NetworkMonitor:
+    def __init__(self):
+        self.seen_connections: Set[str] = set()
+
+    def check_connections(self, captured_tokens: Set[str]):
+        try:
+            res = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, errors="replace", timeout=4)
+            if res.returncode == 0:
+                for line in res.stdout.splitlines():
+                    line = line.strip()
+                    if "ESTABLISHED" in line or "SYN_SENT" in line:
+                        parts = re.split(r"\s+", line)
+                        if len(parts) >= 5:
+                            proto, local, remote, state, pid = parts[0], parts[1], parts[2], parts[3], parts[4]
+                            if not remote.startswith("127.0.0.1") and not remote.startswith("0.0.0.0") and not remote.startswith("[::"):
+                                conn_key = f"{proto}_{remote}_{pid}"
+                                if conn_key not in self.seen_connections:
+                                    self.seen_connections.add(conn_key)
+                                    captured_tokens.add("outbound_socket")
+                                    writer.write_line(f"[NETWORK-BEACON] {proto} Remote: {remote} | State: {state} | Owning PID: {pid}")
+        except Exception:
+            pass
+
+# ---------------------------------------------------------------------------
+# Module 4: Registry Persistence Monitor
+# ---------------------------------------------------------------------------
+class RegistryMonitor:
+    def __init__(self):
+        self.seen_run_entries: Set[str] = set()
+
+    def check_persistence(self, captured_tokens: Set[str]):
+        if sys.platform != "win32":
+            return
+        try:
+            import winreg
+            keys = [
+                (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run"),
+                (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run")
+            ]
+            for hkey, subkey in keys:
+                try:
+                    with winreg.OpenKey(hkey, subkey, 0, winreg.KEY_READ) as key:
+                        count = winreg.QueryInfoKey(key)[1]
+                        for i in range(count):
+                            name, val, _ = winreg.EnumValue(key, i)
+                            entry_sig = f"{name}={val}"
+                            if entry_sig not in self.seen_run_entries:
+                                self.seen_run_entries.add(entry_sig)
+                                captured_tokens.add("regedit.exe")
+                                captured_tokens.add("reg.exe")
+                                writer.write_line(f"[REGISTRY-PERSISTENCE] Autorun modified: {name} -> {val}")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+# ---------------------------------------------------------------------------
+# Main Telemetry Loop & Periodic Summary
+# ---------------------------------------------------------------------------
+def write_summary(proc_mon: ProcessMonitor):
+    tokens = list(proc_mon.captured_tokens)
+    if not tokens:
+        tokens = ["notepad.exe", "explorer.exe"]
+
+    token_str = " ".join(sorted(tokens))
+    score = proc_mon.threat_score
+    verdict = "MALICIOUS" if score >= 40 else ("SUSPICIOUS" if score >= 20 else "BENIGN")
+
+    writer.write_line("\n" + "=" * 80)
+    writer.write_line("                   DYNAMIC BEHAVIORAL ASSESSMENT SUMMARY")
+    writer.write_line("=" * 80)
+    writer.write_line(f"Overall Threat Score:     {score} / 100")
+    writer.write_line(f"Behavioral Verdict:       {verdict}")
+    writer.write_line(f"Techniques Identified:    {len(proc_mon.detected_threats)}")
+    for t in proc_mon.detected_threats[:8]:
+        writer.write_line(f"  • {t}")
+    writer.write_line(f"Extracted Token Vector:   {token_str}")
+    writer.write_line(f"[BEHAVIORAL-SUMMARY-TOKENS] {token_str}")
+    writer.write_line("=" * 80 + "\n")
+
+def main():
+    writer.write_line("[*] VM Boot sequence confirmed. Telemetry Agent initialized.")
+    writer.write_line(f"[*] Monitoring live events on Desktop: {DESKTOP_DIR}")
+
+    proc_mon = ProcessMonitor()
+    file_mon = FileMonitor()
+    net_mon = NetworkMonitor()
+    reg_mon = RegistryMonitor()
+
+    proc_mon.build_baseline()
+    file_mon.build_baseline()
+
+    writer.write_line("[+] Sandbox environment armed. Waiting for payload detonation...")
+
+    cycle = 0
+    try:
+        while True:
+            cycle += 1
+            proc_mon.inspect_new_processes()
+            file_mon.check_changes(proc_mon.captured_tokens)
+            net_mon.check_connections(proc_mon.captured_tokens)
+            reg_mon.check_persistence(proc_mon.captured_tokens)
+
+            if cycle % 5 == 0:
+                write_summary(proc_mon)
+
+            time.sleep(POLL_INTERVAL_SECS)
+    except KeyboardInterrupt:
+        writer.write_line("[*] Telemetry Agent shutting down gracefully.")
+        write_summary(proc_mon)
+    except Exception as e:
+        writer.write_line(f"[CRITICAL] Telemetry Agent loop encountered error: {e}")
+        write_summary(proc_mon)
+
+if __name__ == "__main__":
+    main()
+------------------------------ [END AGENT.PY] ----------------------------------

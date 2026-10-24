@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environments and Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Threat Sandbox Runtime & Storage
+uploads/*
+!uploads/.gitkeep
+*.log
+url_capture_*.png
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
