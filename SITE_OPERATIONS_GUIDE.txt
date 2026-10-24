@@ -6,7 +6,7 @@ Target Application: Unified Threat Sandbox & Web Origin Reconnaissance Platform
 Location: c:\Users\royal\OneDrive\Desktop\threat-sandbox
 Current Local Endpoint: http://127.0.0.1:5000
 Current Public HTTPS Tunnel URL: 
->>> https://buzz-cabinet-ensures-lead.trycloudflare.com <<<
+>>> https://allow-warehouse-professional-cove.trycloudflare.com <<<
 
 ================================================================================
 TABLE OF CONTENTS
@@ -25,7 +25,7 @@ TABLE OF CONTENTS
 The Threat Sandbox is actively published to the public internet via an encrypted
 Cloudflare Tunnel edge connector.
 
-- Public HTTPS URL : https://buzz-cabinet-ensures-lead.trycloudflare.com
+- Public HTTPS URL : https://allow-warehouse-professional-cove.trycloudflare.com
 - Local Server     : http://127.0.0.1:5000 (Python Flask + SocketIO)
 - Cloudflare Binary: %LOCALAPPDATA%\cloudflared.exe
 - Encryption       : TLS 1.3 End-to-End Encryption with HSTS Preload
